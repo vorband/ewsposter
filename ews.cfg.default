@@ -1,0 +1,72 @@
+[MAIN]
+homedir = /opt/ews
+spooldir = /opt/ews/spool
+logdir = /opt/ews
+del_malware_after_send = false
+send_malware = true
+sendlimit = 400
+contact = sender@example.com
+proxy = 
+ip = 1.2.3.4
+
+[EWS]
+ews = false
+username = <your ews portal username>
+token = <your ews portal token>
+rhost_first = https://<your ews portal 1>
+rhost_second = https://<your ews portal 2>
+
+[HPFEED]
+hpfeed = false
+host = localhost
+port = 1337
+channels = test
+ident = username
+secret= passwort
+
+[EWSJSON]
+json = false
+jsondir = /opt/ewsposter/json
+
+[GLASTOPFV3]
+glastopfv3 = false
+nodeid = <your unique analyzer id>
+sqlitedb = /opt/honeypot/glastopf/data/db/glastopf.db
+malwaredir = /opt/honeypot/glastopf/data/files
+
+[GLASTOPFV2]
+glastopfv2 = false
+nodeid =  <your unique analyzer id>
+mysqlhost = localhost
+mysqldb = <your mysql db for kippo>
+mysqluser = <your user for this db>
+mysqlpw = <your password>
+malwaredir = /opt/ewsposter/malware
+
+[KIPPO]
+kippo = false
+nodeid =  <your unique analyzer id>
+mysqlhost = localhost
+mysqldb = <your mysql db for glastopf>
+mysqluser = <your user for this db>
+mysqlpw = <your password>
+malwaredir = /opt/honeypot/kippo/downloads
+
+[DIONAEA]
+dionaea = false
+nodeid =  <your unique analyzer id>
+malwaredir = /opt/honeypot/dionaea/var/download
+sqlitedb = /opt/honeypot/dionaea/var/logsql.sqlite
+
+[HONEYTRAP]
+honeytrap = false
+nodeid =  <your unique analyzer id>
+newversion = true
+payloaddir = /opt/honeypot/honeytrap/attacks
+attackerfile = /opt/honeypot/honeytrap/log/attacker.log
+
+[RDPDETECT]
+rdpdetect = false
+nodeid = 4799
+iptableslog = /opt/honeypot/db/iptables.log
+targetip = <ip of the RDP dummy system>

@@ -1,0 +1,5 @@
+*.pyc
+**/*.pyc
+*.log
+*.idx
+ews.cfg
