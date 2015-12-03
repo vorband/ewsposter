@@ -23,6 +23,7 @@ def ecfg(name,version):
     parser.add_argument("-S","--sendonly", help="only send unsend alerts",action="store_true")
     parser.add_argument("-E","--ewsonly", help="only generate ews alerts files",action="store_true")
     parser.add_argument("-dcr","--daycounter", help="reset and log daycounters for all honeypots",action="store_true")
+    parser.add_argument("-j","--jsonpath", help="Write JSON output file to path")
     parser.add_argument("-V","--version", help="show the EWS Poster Version",action="version", version=name + " " + version)
 
     args = parser.parse_args()
@@ -75,6 +76,15 @@ def ecfg(name,version):
     else:
         ECFG["a.modul"] = ""
 
+    if args.jsonpath:
+        ECFG["a.jsondir"] = args.jsonpath
+
+        if os.path.isdir(args.jsonpath) is not True:
+            logme(MODUL,"JsonPath %s did not exist. Abort !" % (args.jsonpath),("P1","EXIT"),ECFG)
+
+    else:
+        ECFG["a.jsondir"] = ""
+
     # say hello
 
     logme(MODUL,name + " " + version + " (c) by Markus Schroer <markus.schroer@telekom.de>\n",("P0"),ECFG)
@@ -118,7 +128,7 @@ def ecfg(name,version):
 
     # sendlimit expect
 
-    if int(MCFG["sendlimit"]) > 400:
+    if int(MCFG["sendlimit"]) > 500:
         logme(MODUL,"Error Sendlimit " + MCFG["sendlimit"] + " to high. Max 400 ! ",("P1","EXIT"),ECFG)
     elif int(MCFG["sendlimit"]) < 1:
         logme(MODUL,"Error Sendlimit " + MCFG["sendlimit"] + " to low. Min 1 ! ",("P1","EXIT"),ECFG)
@@ -197,6 +207,10 @@ def ecfg(name,version):
        EWSJSON["json"] = True
     else:
        EWSJSON["json"] = False
+
+    if ECFG["a.jsondir"] != "":
+        EWSJSON["jsondir"] = ECFG["a.jsondir"]
+
 
     if EWSJSON["jsondir"] != "NULL" and  EWSJSON["jsondir"] != "FALSE" and os.path.isdir(EWSJSON["jsondir"]) is True:
          EWSJSON["jsondir"] =  EWSJSON["jsondir"] + os.sep + "ews.json"

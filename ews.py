@@ -16,7 +16,6 @@ from moduls.einit import locksocket, ecfg, daycounterreset
 from moduls.elog import logme
 from moduls.etoolbox import ip4or6, readcfg, readonecfg, timestamp, calcminmax, countme
 
-import json
 import sqlite3
 import MySQLdb.cursors
 import requests
@@ -26,9 +25,8 @@ import urllib
 import hpfeeds
 import fnmatch
 
-
 name = "EWS Poster"
-version = "v1.8.0b"
+version = "v1.8.1b"
 
 
 def ewswebservice(ems):
@@ -100,6 +98,7 @@ def ewswebservice(ems):
         logme(MODUL,"HTTP Errorcode != 200 (%s)" % (str(e)) ,("LOG","VERBOSE"),ECFG)
         return False
 
+
 def viewcounter(MODUL,x,y):
 
     if y  == 100:
@@ -111,6 +110,7 @@ def viewcounter(MODUL,x,y):
         y += 1
 
     return x,y
+
 
 def sender():
 
@@ -182,6 +182,7 @@ def sender():
 
     return
 
+
 def buildews(esm,DATA,REQUEST,ADATA):
 
     ewsalert(esm,DATA,REQUEST,ADATA)
@@ -210,12 +211,14 @@ def sendews(esm):
 
     return
 
+
 def writeews(EWSALERT):
     with open(ECFG["spooldir"] + os.sep + timestamp() + ".ews",'w') as f:
         f.write(EWSALERT)
         f.close()
 
     return True
+
 
 def malware(DIR,FILE,KILL):
     if not os.path.isdir(DIR):
@@ -231,6 +234,7 @@ def malware(DIR,FILE,KILL):
             return 1,"FILE " + DIR + os.sep + FILE + " is bigger than 5 MB!"
     else:
         return 1, "FILE " + DIR + os.sep + FILE + " NOT EXISTS!"
+
 
 def hpfeedsend(esm):
 
@@ -251,38 +255,34 @@ def hpfeedsend(esm):
 
     return True
 
+
 def buildjson(jesm,DATA,REQUEST,ADATA):
 
-    J = {}
+    if DATA["sport"] == "":
+       DATA["sport"] = "0"
 
-    J["alert"]  = { "nodeid"     : DATA["aid"],
-                   "timestamp"  : "%sT%s.000000" % (DATA["timestamp"][0:10],DATA["timestamp"][11:19]),
-                  }
+    jesm += '{"timestamp":"%s","event_type":"alert","src_ip":"%s","src_port":%s,"dest_ip":"%s","dest_port":%s,"honeypot":{"name":"%s","nodeid":"%s"}}' %\
+             (
+                 ("%sT%s.000000" % (DATA["timestamp"][0:10],DATA["timestamp"][11:19])),
+                 DATA["sadr"],
+                 DATA["sport"],
+                 DATA["tadr"],
+                 DATA["tport"],
+                 REQUEST["description"],
+                 DATA["aid"]
+             )
 
-    J["source"] = { "address"   : DATA["sadr"],
-                    "protocol"  : DATA["sprot"],
-                    "port"      : DATA["sport"],
-                    "ipversion" : DATA["sipv"]
-                  }
-
-    J["target"] = { "address"   : DATA["tadr"],
-                    "protocol"  : DATA["tprot"],
-                    "port"      : DATA["tport"],
-                    "ipversion" : DATA["tipv"]
-                  }
-
-    J["request"] = REQUEST
-    J["additionaldata"] = ADATA
-
-    jesm.append(J)
+    jesm += "\n"
 
     return jesm
+
 
 def writejson(jesm):
     if len(jesm) > 0 and ECFG["json"] is True:
         with open(ECFG["jsondir"],'a+') as f:
-            f.write(json.dumps(jesm, sort_keys=False, indent=4, separators=(',', ': ')))
+            f.write(jesm)
             f.close()
+
 
 def verbosemode(MODUL,DATA,REQUEST,ADATA):
     logme(MODUL,"---- " + MODUL + " ----" ,("VERBOSE"),ECFG)
@@ -360,7 +360,7 @@ def glastopfv3():
     x = 0 ; y = 1
 
     esm = ewsauth(ECFG["username"],ECFG["token"])
-    jesm = [ ]
+    jesm = ""
 
     for row in rows:
 
@@ -492,7 +492,7 @@ def glastopfv2():
     x = 0 ; y = 1
 
     esm = ewsauth(ECFG["username"],ECFG["token"])
-    jesm = [ ]
+    jesm = ""
 
     for row in rows:
 
@@ -614,7 +614,7 @@ def kippo():
     x = 0 ; y = 1
 
     esm = ewsauth(ECFG["username"],ECFG["token"])
-    jesm = [ ]
+    jesm = ""
 
     for row in rows:
 
@@ -726,7 +726,7 @@ def dionaea():
     x = 0 ; y = 1
 
     esm = ewsauth(ECFG["username"],ECFG["token"])
-    jesm = [ ]
+    jesm = ""
 
     for row in rows:
 
@@ -754,7 +754,7 @@ def dionaea():
                   }
 
         REQUEST = {
-                    "description" : "Network Honeyport Dionaea vX.x",
+                    "description" : "Network Honeyport Dionaea v0.1.0",
                   }
 
         # Check for malware bin's
@@ -843,7 +843,7 @@ def honeytrap():
     I = 0 ; x = 0 ; y = 1
 
     esm = ewsauth(ECFG["username"],ECFG["token"])
-    jesm = [ ]
+    jesm = ""
 
     while True:
 
@@ -884,7 +884,7 @@ def honeytrap():
 
 
             REQUEST = { 
-                        "description" : "NetworkHoneypot Honeytrap vX.x"
+                        "description" : "NetworkHoneypot Honeytrap v1.1"
                       }
 
             # Search for Payload
@@ -954,7 +954,7 @@ def rdpdetect():
     I = 0 ; x = 0 ; y = 1
 
     esm = ewsauth(ECFG["username"],ECFG["token"])
-    jesm = [ ]
+    jesm = ""
 
     while True:
 
