@@ -24,9 +24,10 @@ import base64
 import urllib
 import hpfeeds
 import fnmatch
+import json
 
 name = "EWS Poster"
-version = "v1.8.1b"
+version = "v1.8.2b"
 
 
 def ewswebservice(ems):
@@ -420,6 +421,11 @@ def glastopfv3():
             if 'Host' in json.loads(row["request_header"]):
                 ADATA["host"] = str(json.loads(row["request_header"])["Host"])
 
+        if "request_body" in  row.keys():
+            if len(row["request_body"]) > 0:
+                ADATA["requestbody"] = row["request_body"]
+
+        esm = buildews(esm,DATA,REQUEST,ADATA)
         if "request_body" in  row.keys():
             if len(row["request_body"]) > 0:
                 ADATA["requestbody"] = row["request_body"]

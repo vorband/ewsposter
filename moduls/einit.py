@@ -209,8 +209,8 @@ def ecfg(name,version):
        EWSJSON["json"] = False
 
     if ECFG["a.jsondir"] != "":
+        EWSJSON["json"] = True
         EWSJSON["jsondir"] = ECFG["a.jsondir"]
-
 
     if EWSJSON["jsondir"] != "NULL" and  EWSJSON["jsondir"] != "FALSE" and os.path.isdir(EWSJSON["jsondir"]) is True:
          EWSJSON["jsondir"] =  EWSJSON["jsondir"] + os.sep + "ews.json"
