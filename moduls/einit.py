@@ -205,17 +205,19 @@ def ecfg(name,version):
 
     if EWSJSON["json"].lower() == "true":
        EWSJSON["json"] = True
+
+       if os.path.isdir(EWSJSON["jsondir"]) is True:
+           EWSJSON["jsondir"] = EWSJSON["jsondir"] + os.sep + "ews.json"
+       else:
+           logme(MODUL,"Error missing jsondir " + EWSJSON["jsondir"] + " Abort !",("P1","EXIT"),ECFG)
+
     else:
        EWSJSON["json"] = False
 
-    if ECFG["a.jsondir"] != "":
-        EWSJSON["json"] = True
-        EWSJSON["jsondir"] = ECFG["a.jsondir"]
+    if ECFG["a.jsondir"] != "" and os.path.isdir(ECFG["a.jsondir"]) is True:
+       EWSJSON["json"] = True
+       EWSJSON["jsondir"] = ECFG["a.jsondir"]
 
-    if EWSJSON["jsondir"] != "NULL" and  EWSJSON["jsondir"] != "FALSE" and os.path.isdir(EWSJSON["jsondir"]) is True:
-         EWSJSON["jsondir"] =  EWSJSON["jsondir"] + os.sep + "ews.json"
-    else:
-        logme(MODUL,"Error missing jsondir " + EWSJSON["jsondir"] + " Abort !",("P1","EXIT"),ECFG)
 
     ECFG.update(MCFG)
     ECFG.update(EWSCFG)
