@@ -402,7 +402,7 @@ def glastopfv3():
                 REQUEST["binary"] = malwarefile
            else:
                 logme(MODUL,"Mission Malwarefile %s" % row["filename"] ,("P1","LOG"),ECFG)
- 
+
         # Collect additional Data
 
         ADATA = {
@@ -889,7 +889,7 @@ def honeytrap():
                       }
 
 
-            REQUEST = { 
+            REQUEST = {
                         "description" : "NetworkHoneypot Honeytrap v1.1"
                       }
 
@@ -1028,6 +1028,37 @@ def rdpdetect():
     if y  > 1:
         logme(MODUL,"%s EWS alert records send ..." % (x+y-2),("P2"),ECFG)
     return
+
+def iMobility():
+
+    MODUL  = "IMOBILITY"
+    logme(MODUL,"Starting iMobility Modul.",("P1"),ECFG)
+
+    # collect honeypot config dic
+
+    ITEMS  = ("iMobility","nodeid","logfile")
+    HONEYPOT = readcfg(MODUL,ITEMS,ECFG["cfgfile"])
+
+    # iptables file exists ?
+
+    if os.path.isfile(HONEYPOT["logfile"]) is False:
+        logme(MODUL,"[ERROR] Missing LogFile " + HONEYPOT["logfile"] + ". Abort !",("P3","LOG"),ECFG)
+
+    # count limit
+
+    imin = int(countme(MODUL,'fileline',-1,ECFG))
+
+    if int(ECFG["sendlimit"]) > 0:
+        logme(MODUL,"Send Limit is set to : " + str(ECFG["sendlimit"]) + ". Adapting to limit!",("P1"),ECFG)
+
+    I = 0 ; x = 0 ; y = 1
+
+    esm = ewsauth(ECFG["username"],ECFG["token"])
+    jesm = ""
+
+
+
+
 
 ###############################################################################
  
