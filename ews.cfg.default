@@ -67,6 +67,11 @@ attackerfile = /opt/honeypot/honeytrap/log/attacker.log
 
 [RDPDETECT]
 rdpdetect = false
-nodeid = 4799
+nodeid = <your unique analyzer id>
 iptableslog = /opt/honeypot/db/iptables.log
 targetip = <ip of the RDP dummy system>
+
+[IMOBILITY]
+iMobility = false
+nodeid = <your unique analyzer id>
+logfile = /work2/ewsposter/imobility/imobility.log

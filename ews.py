@@ -27,7 +27,7 @@ import fnmatch
 import json
 
 name = "EWS Poster"
-version = "v1.8.2b"
+version = "v1.8.3b"
 
 
 def ewswebservice(ems):
@@ -1039,10 +1039,10 @@ def iMobility():
     ITEMS  = ("iMobility","nodeid","logfile")
     HONEYPOT = readcfg(MODUL,ITEMS,ECFG["cfgfile"])
 
-    # iptables file exists ?
+    # logfile file exists ?
 
     if os.path.isfile(HONEYPOT["logfile"]) is False:
-        logme(MODUL,"[ERROR] Missing LogFile " + HONEYPOT["logfile"] + ". Abort !",("P3","LOG"),ECFG)
+        logme(MODUL,"[ERROR] Missing LogFile " + HONEYPOT["logfile"] + ". Skip !",("P3","LOG"),ECFG)
 
     # count limit
 
@@ -1056,8 +1056,74 @@ def iMobility():
     esm = ewsauth(ECFG["username"],ECFG["token"])
     jesm = ""
 
+    while True:
+
+        x,y = viewcounter(MODUL,x,y)
+
+        I += 1
+
+        if int(ECFG["sendlimit"]) > 0 and I > int(ECFG["sendlimit"]):
+            break
+
+        line = getline(HONEYPOT["logfile"],(imin + I)).rstrip()
+
+        if len(line) == 0:
+            break
+        else:
+            # Prepair and collect Alert Data
+
+            line = re.sub(r'  ',r' ',re.sub(r'[\[\]\-\>]',r'',line))
+
+            srcipandport, dstipandport, url, dateandtime =  line.split("|",3)
+
+            print urllib.quote(url)
+
+            DATA =    {
+                        "aid"       : HONEYPOT["nodeid"],
+                        "timestamp" : "%s-%s-%s %s" % (dateandtime[0:4], dateandtime[4:6], dateandtime[6:8], dateandtime[9:17]),
+                        "sadr"      : "%s.%s.%s.%s" % (srcipandport.split(".")[0], srcipandport.split(".")[1], srcipandport.split(".")[2], srcipandport.split(".")[3]),
+                        "sipv"      : "ipv4",
+                        "sprot"     : "tcp",
+                        "sport"     : srcipandport.split(".")[4],
+                        "tipv"      : "ipv4",
+                        "tadr"      : "%s.%s.%s.%s" % (dstipandport.split(".")[0], dstipandport.split(".")[1], dstipandport.split(".")[2], dstipandport.split(".")[3]),
+                        "tprot"     : "tcp",
+                        "tport"     : dstipandport.split(".")[4],
+                      }
+
+            REQUEST = {
+                        "description" : "iMobility Honeypot",
+                        "url"         : urllib.quote(url.encode('ascii', 'ignore'))
+                      }
 
 
+            # Collect additional Data
+
+            ADATA =   {
+                      }
+
+            # generate template and send
+
+            esm = buildews(esm,DATA,REQUEST,ADATA)
+            jesm = buildjson(jesm,DATA,REQUEST,ADATA)
+
+            countme(MODUL,'fileline',-2,ECFG)
+            countme(MODUL,'daycounter', -2,ECFG)
+
+            if ECFG["a.verbose"] is True:
+                verbosemode(MODUL,DATA,REQUEST,ADATA)
+
+    # Cleaning linecache
+    clearcache()
+
+    if int(esm.xpath('count(//Alert)')) > 0:
+        sendews(esm)
+
+    writejson(jesm)
+
+    if y  > 1:
+        logme(MODUL,"%s EWS alert records send ..." % (x+y-2),("P2"),ECFG)
+    return
 
 
 ###############################################################################
@@ -1086,7 +1152,7 @@ if __name__ == "__main__":
             sender()
 
 
-        for i in ("glastopfv3", "glastopfv2", "kippo", "dionaea", "honeytrap", "rdpdetect"):
+        for i in ("glastopfv3", "glastopfv2", "kippo", "dionaea", "honeytrap", "rdpdetect", "iMobility"):
 
             if ECFG["a.modul"]:
                 if ECFG["a.modul"] == i:
