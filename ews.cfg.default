@@ -71,7 +71,7 @@ nodeid = <your unique analyzer id>
 iptableslog = /opt/honeypot/db/iptables.log
 targetip = <ip of the RDP dummy system>
 
-[IMOBILITY]
-iMobility = false
+[EMOBILITY]
+eMobility = false
 nodeid = <your unique analyzer id>
-logfile = /work2/ewsposter/imobility/imobility.log
+logfile = /work2/ewsposter/emobility/emobility.log

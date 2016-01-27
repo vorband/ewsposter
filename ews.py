@@ -1029,14 +1029,14 @@ def rdpdetect():
         logme(MODUL,"%s EWS alert records send ..." % (x+y-2),("P2"),ECFG)
     return
 
-def iMobility():
+def eMobility():
 
-    MODUL  = "IMOBILITY"
-    logme(MODUL,"Starting iMobility Modul.",("P1"),ECFG)
+    MODUL  = "EMOBILITY"
+    logme(MODUL,"Starting eMobility Modul.",("P1"),ECFG)
 
     # collect honeypot config dic
 
-    ITEMS  = ("iMobility","nodeid","logfile")
+    ITEMS  = ("eMobility","nodeid","logfile")
     HONEYPOT = readcfg(MODUL,ITEMS,ECFG["cfgfile"])
 
     # logfile file exists ?
@@ -1076,8 +1076,6 @@ def iMobility():
 
             srcipandport, dstipandport, url, dateandtime =  line.split("|",3)
 
-            print urllib.quote(url)
-
             DATA =    {
                         "aid"       : HONEYPOT["nodeid"],
                         "timestamp" : "%s-%s-%s %s" % (dateandtime[0:4], dateandtime[4:6], dateandtime[6:8], dateandtime[9:17]),
@@ -1092,7 +1090,7 @@ def iMobility():
                       }
 
             REQUEST = {
-                        "description" : "iMobility Honeypot",
+                        "description" : "eMobility Honeypot",
                         "url"         : urllib.quote(url.encode('ascii', 'ignore'))
                       }
 
@@ -1152,7 +1150,7 @@ if __name__ == "__main__":
             sender()
 
 
-        for i in ("glastopfv3", "glastopfv2", "kippo", "dionaea", "honeytrap", "rdpdetect", "iMobility"):
+        for i in ("glastopfv3", "glastopfv2", "kippo", "dionaea", "honeytrap", "rdpdetect", "eMobility"):
 
             if ECFG["a.modul"]:
                 if ECFG["a.modul"] == i:
