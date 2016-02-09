@@ -1029,7 +1029,7 @@ def rdpdetect():
         logme(MODUL,"%s EWS alert records send ..." % (x+y-2),("P2"),ECFG)
     return
 
-def eMobility():
+def emobility():
 
     MODUL  = "EMOBILITY"
     logme(MODUL,"Starting eMobility Modul.",("P1"),ECFG)
@@ -1150,7 +1150,7 @@ if __name__ == "__main__":
             sender()
 
 
-        for i in ("glastopfv3", "glastopfv2", "kippo", "dionaea", "honeytrap", "rdpdetect", "eMobility"):
+        for i in ("glastopfv3", "glastopfv2", "kippo", "dionaea", "honeytrap", "rdpdetect", "emobility"):
 
             if ECFG["a.modul"]:
                 if ECFG["a.modul"] == i:
