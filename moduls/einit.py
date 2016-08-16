@@ -24,10 +24,17 @@ def ecfg(name,version):
     parser.add_argument("-E","--ewsonly", help="only generate ews alerts files",action="store_true")
     parser.add_argument("-dcr","--daycounter", help="reset and log daycounters for all honeypots",action="store_true")
     parser.add_argument("-j","--jsonpath", help="Write JSON output file to path")
+    parser.add_argument("-L","--sendlimit", help="Set {xxx} for max alerts will send in one session", type=int, default=500, action="store")
     parser.add_argument("-V","--version", help="show the EWS Poster Version",action="version", version=name + " " + version)
 
     args = parser.parse_args()
 
+    if args.sendlimit:
+        ECFG["sendlimit2"] = args.sendlimit
+    else:
+        ECFG["sendlimit2"] = ""
+
+    
     if args.loop:
         ECFG["a.loop"] = args.loop
     else:
@@ -128,12 +135,15 @@ def ecfg(name,version):
 
     # sendlimit expect
 
+    if  ECFG["sendlimit2"] != "":
+        MCFG["sendlimit"] = ECFG["sendlimit2"]
+
     if int(MCFG["sendlimit"]) > 500:
-        logme(MODUL,"Error Sendlimit " + MCFG["sendlimit"] + " to high. Max 400 ! ",("P1","EXIT"),ECFG)
+        logme(MODUL,"Error Sendlimit " + str(MCFG["sendlimit"]) + " to high. Max 500 ! ",("P1","EXIT"),ECFG)
     elif int(MCFG["sendlimit"]) < 1:
-        logme(MODUL,"Error Sendlimit " + MCFG["sendlimit"] + " to low. Min 1 ! ",("P1","EXIT"),ECFG)
-    elif MCFG["sendlimit"] == "NULL" or MCFG["sendlimit"] == "UNKNOW":
-        logme(MODUL,"Error Sendlimit " + MCFG["sendlimit"] + " Must set between 1 and 400. ",("P1","EXIT"),ECFG)
+        logme(MODUL,"Error Sendlimit " + str(MCFG["sendlimit"]) + " to low. Min 1 ! ",("P1","EXIT"),ECFG)
+    elif MCFG["sendlimit"] == "NULL" or str(MCFG["sendlimit"]) == "UNKNOW":
+        logme(MODUL,"Error Sendlimit " + str(MCFG["sendlimit"]) + " Must set between 1 and 500. ",("P1","EXIT"),ECFG)
 
     # send_malware ?
 

@@ -93,6 +93,5 @@ def readonecfg(MODULE,item,FILE):
     else:
         return "UNKNOW"
 
-
 if __name__ == "__main__":
     pass
