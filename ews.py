@@ -27,7 +27,7 @@ import fnmatch
 import json
 
 name = "EWS Poster"
-version = "v1.8.3b"
+version = "v1.8.4b"
 
 
 def ewswebservice(ems):
@@ -55,7 +55,7 @@ def ewswebservice(ems):
                                        headers=headers,
                                        allow_redirects=True,
                                        timeout=60,
-                                       verify=True
+                                       verify=ECFG["a.ignorecert"]
                                       )
         else:
             webservice = requests.post(host,
@@ -64,7 +64,7 @@ def ewswebservice(ems):
                                        allow_redirects=True,
                                        proxies=proxydic,
                                        timeout=60,
-                                       verify=True
+                                       verify=ECFG["a.ignorecert"]
                                       )
 
 
@@ -1124,6 +1124,105 @@ def emobility():
     return
 
 
+def conpot():
+    MODUL  = "CONPOT"
+    logme(MODUL,"Starting Conpot Modul.",("P1"),ECFG)
+
+    # collect honeypot config dic
+
+    ITEMS  = ("conpot","nodeid","logfile")
+    HONEYPOT = readcfg(MODUL,ITEMS,ECFG["cfgfile"])
+
+    # logfile file exists ?
+
+    if os.path.isfile(HONEYPOT["logfile"]) is False:
+        logme(MODUL,"[ERROR] Missing LogFile " + HONEYPOT["logfile"] + ". Skip !",("P3","LOG"),ECFG)
+
+    # count limit
+
+    imin = int(countme(MODUL,'fileline',-1,ECFG))
+
+    if int(ECFG["sendlimit"]) > 0:
+        logme(MODUL,"Send Limit is set to : " + str(ECFG["sendlimit"]) + ". Adapting to limit!",("P1"),ECFG)
+
+    I = 0 ; x = 0 ; y = 1
+
+    esm = ewsauth(ECFG["username"],ECFG["token"])
+    jesm = ""
+
+    while True:
+    
+        x,y = viewcounter(MODUL,x,y)
+
+        I += 1
+
+        if int(ECFG["sendlimit"]) > 0 and I > int(ECFG["sendlimit"]):
+            break
+
+        line = getline(HONEYPOT["logfile"],(imin + I)).rstrip()
+
+        if len(line) == 0:
+            break
+        else:
+            # Prepair and collect Alert Data
+
+            line = re.sub(r'  ',r' ',re.sub(r'[\[\]\-\>]',r'',line))
+
+            # parse json
+            content = json.loads(line)
+
+            DATA =    {
+                        "aid"       : HONEYPOT["nodeid"],
+                        "timestamp" : "%s-%s-%s %s" % (content['timestamp'][0:4], content['timestamp'][4:6], content['timestamp'][6:8], content['timestamp'][9:17]),
+                        "sadr"      : content['src_ip'],
+                        "sipv"      : "ipv4",
+                        "sprot"     : "tcp",
+                        "sport"     : "%d" % content['src_port'],
+                        "tipv"      : "ipv4",
+                        "tadr"      : content['dst_ip'],
+                        "tprot"     : "tcp",
+                        "tport"     : "undefined",
+                      }
+
+            REQUEST = {
+                        "description" : "Conpot Honeypot",
+                      }
+
+
+            # Collect additional Data
+
+            ADATA =   {
+                        "conpot_event_type"    :   content['event_type'],
+                        "conpot_data_type"     :   content['data_type'],
+                        "conpot_sensor_id"     :   content['sensorid'],
+                        "conpot_request"       :   content['request'],
+                        "conpot_id"            :   content['id'],
+                        "conpot_response"      :   content['response']
+                      }
+
+            # generate template and send
+
+            esm = buildews(esm,DATA,REQUEST,ADATA)
+            jesm = buildjson(jesm,DATA,REQUEST,ADATA)
+
+            countme(MODUL,'fileline',-2,ECFG)
+            countme(MODUL,'daycounter', -2,ECFG)
+
+            if ECFG["a.verbose"] is True:
+                verbosemode(MODUL,DATA,REQUEST,ADATA)
+
+    # Cleaning linecache
+    clearcache()
+
+    if int(esm.xpath('count(//Alert)')) > 0:
+        sendews(esm)
+
+    writejson(jesm)
+
+    if y  > 1:
+        logme(MODUL,"%s EWS alert records send ..." % (x+y-2),("P2"),ECFG)
+    return
+
 ###############################################################################
  
 if __name__ == "__main__":
@@ -1150,7 +1249,7 @@ if __name__ == "__main__":
             sender()
 
 
-        for i in ("glastopfv3", "glastopfv2", "kippo", "dionaea", "honeytrap", "rdpdetect", "emobility"):
+        for i in ("glastopfv3", "glastopfv2", "kippo", "dionaea", "honeytrap", "rdpdetect", "emobility", "conpot"):
 
             if ECFG["a.modul"]:
                 if ECFG["a.modul"] == i:
@@ -1169,3 +1268,4 @@ if __name__ == "__main__":
         else:
             logme(MODUL,"Sleeping for %s seconds ...." % ECFG["a.loop"] ,("P1"),ECFG)
             time.sleep(int(ECFG["a.loop"]))
+

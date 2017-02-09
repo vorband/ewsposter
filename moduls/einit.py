@@ -18,14 +18,16 @@ def ecfg(name,version):
     parser.add_argument("-v","--verbose", help="set output verbosity",action="store_true")
     parser.add_argument("-d","--debug", help="set output debug",action="store_true")
     parser.add_argument("-l","--loop", help="Go in endless loop. Set {xx} for seconds to wait for next loop", type=int, default=0, action="store")
-    parser.add_argument("-m","--modul", help="only send alerts for this modul", choices=['glastopfv3','glastopfv2','kippo','dionaea','honeytrap','rdpdetect','emobility'],action="store")
+    parser.add_argument("-m","--modul", help="only send alerts for this modul", choices=['glastopfv3','glastopfv2','kippo','dionaea','honeytrap','rdpdetect','emobility', 'conpot'],action="store")
     parser.add_argument("-s","--silent", help="silent mode without output",action="store_true")
+    parser.add_argument("-i","--ignorecert", help="ignore certificate warnings",action="store_true")
     parser.add_argument("-S","--sendonly", help="only send unsend alerts",action="store_true")
     parser.add_argument("-E","--ewsonly", help="only generate ews alerts files",action="store_true")
     parser.add_argument("-dcr","--daycounter", help="reset and log daycounters for all honeypots",action="store_true")
     parser.add_argument("-j","--jsonpath", help="Write JSON output file to path")
     parser.add_argument("-L","--sendlimit", help="Set {xxx} for max alerts will send in one session", type=int, default=500, action="store")
     parser.add_argument("-V","--version", help="show the EWS Poster Version",action="version", version=name + " " + version)
+
 
     args = parser.parse_args()
 
@@ -49,6 +51,11 @@ def ecfg(name,version):
         ECFG["a.debug"] = True
     else:
         ECFG["a.debug"] = False
+
+    if args.ignorecert:
+        ECFG["a.ignorecert"] = True
+    else:
+        ECFG["a.ignorecert"] = False
 
     if args.silent:
         ECFG["a.silent"] = True
