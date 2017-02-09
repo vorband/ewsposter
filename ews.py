@@ -48,6 +48,12 @@ def ewswebservice(ems):
     else:
        proxydic = {}
 
+    if ECFG["a.ignorecert"] is True:
+       verifycert=False
+    else:
+       verifycert=True
+
+
     try:
         if not "https" in proxydic:
             webservice = requests.post(host,
@@ -55,7 +61,7 @@ def ewswebservice(ems):
                                        headers=headers,
                                        allow_redirects=True,
                                        timeout=60,
-                                       verify=True
+                                       verify=verifycert
                                       )
         else:
             webservice = requests.post(host,
@@ -64,7 +70,7 @@ def ewswebservice(ems):
                                        allow_redirects=True,
                                        proxies=proxydic,
                                        timeout=60,
-                                       verify=True
+                                       verify=verifycert
                                       )
 
 
