@@ -48,7 +48,6 @@ def ewswebservice(ems):
     else:
        proxydic = {}
 
-    
     try:
         if not "https" in proxydic:
             webservice = requests.post(host,
