@@ -75,3 +75,8 @@ targetip = <ip of the RDP dummy system>
 eMobility = false
 nodeid = <your unique analyzer id>
 logfile = /work2/ewsposter/emobility/emobility.log
+
+[CONPOT]
+conpot = false
+nodeid = <your unique analyzer id>
+logfile = /opt/conpot/conpot.json
