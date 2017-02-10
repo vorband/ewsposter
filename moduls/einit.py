@@ -194,7 +194,7 @@ def ecfg(name,version):
 
     # Read EWS Config Parameter
 
-    ITEMS = ("ews","username","token","rhost_first","rhost_second","ignorecert")
+    ITEMS = ("ews","username","token","rhost_first","rhost_second")
     EWSCFG = readcfg("EWS",ITEMS, ECFG["cfgfile"])
 
     # Set ews real true or false
@@ -205,8 +205,10 @@ def ecfg(name,version):
        EWSCFG["ews"] = False
 
     # ignore cert validation if ignorecert-parameter is set
+    
+    EWSCFGCERT =readonecfg("EWS","ignorecert", ECFG["cfgfile"]) 
 
-    if EWSCFG["ignorecert"].lower() == "true":
+    if EWSCFGCERT.lower() == "true":
        ECFG["a.ignorecert"] = True
 
     # Read HPFEED Config Parameter 
