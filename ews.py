@@ -55,7 +55,7 @@ def ewswebservice(ems):
                                        headers=headers,
                                        allow_redirects=True,
                                        timeout=60,
-                                       verify=ECFG["a.ignorecert"]
+                                       verify= not ECFG["a.ignorecert"]
                                       )
         else:
             webservice = requests.post(host,
@@ -64,7 +64,7 @@ def ewswebservice(ems):
                                        allow_redirects=True,
                                        proxies=proxydic,
                                        timeout=60,
-                                       verify=ECFG["a.ignorecert"]
+                                       verify= not ECFG["a.ignorecert"]
                                       )
 
 
