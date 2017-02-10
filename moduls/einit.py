@@ -36,7 +36,6 @@ def ecfg(name,version):
     else:
         ECFG["sendlimit2"] = ""
 
-    
     if args.loop:
         ECFG["a.loop"] = args.loop
     else:
@@ -195,7 +194,7 @@ def ecfg(name,version):
 
     # Read EWS Config Parameter
 
-    ITEMS = ("ews","username","token","rhost_first","rhost_second")
+    ITEMS = ("ews","username","token","rhost_first","rhost_second","ignorecert")
     EWSCFG = readcfg("EWS",ITEMS, ECFG["cfgfile"])
 
     # Set ews real true or false
@@ -204,6 +203,11 @@ def ecfg(name,version):
        EWSCFG["ews"] = True
     else:
        EWSCFG["ews"] = False
+
+    # ignore cert validation if ignorecert-parameter is set
+
+    if EWSCFG["ignorecert"].lower() == "true":
+       ECFG["a.ignorecert"] = True
 
     # Read HPFEED Config Parameter 
 

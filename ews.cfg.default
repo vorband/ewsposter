@@ -15,6 +15,7 @@ username = <your ews portal username>
 token = <your ews portal token>
 rhost_first = https://<your ews portal 1>
 rhost_second = https://<your ews portal 2>
+ignorecert = false
 
 [HPFEED]
 hpfeed = false
