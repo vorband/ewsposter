@@ -1164,52 +1164,52 @@ def conpot():
         if len(line) == 0:
             break
         else:
-            # Prepair and collect Alert Data
-
-            line = re.sub(r'  ',r' ',re.sub(r'[\[\]\-\>]',r'',line))
-
             # parse json
-            content = json.loads(line)
+            try:
+                content = json.loads(line)
+            except ValueError, e:
+                logme(MODUL,"Invalid json entry found in conpot log file, skipping to next line...",("P1"),ECFG)
+                pass # invalid json
+            else:
+                DATA =    {
+                            "aid"       : HONEYPOT["nodeid"],
+                            "timestamp" : "%s-%s-%s %s" % (content['timestamp'][0:4], content['timestamp'][4:6], content['timestamp'][6:8], content['timestamp'][9:17]),
+                            "sadr"      : content['src_ip'],
+                            "sipv"      : "ipv4",
+                            "sprot"     : "tcp",
+                            "sport"     : "%d" % content['src_port'],
+                            "tipv"      : "ipv4",
+                            "tadr"      : content['dst_ip'],
+                            "tprot"     : "tcp",
+                            "tport"     : "undefined",
+                        }
 
-            DATA =    {
-                        "aid"       : HONEYPOT["nodeid"],
-                        "timestamp" : "%s-%s-%s %s" % (content['timestamp'][0:4], content['timestamp'][4:6], content['timestamp'][6:8], content['timestamp'][9:17]),
-                        "sadr"      : content['src_ip'],
-                        "sipv"      : "ipv4",
-                        "sprot"     : "tcp",
-                        "sport"     : "%d" % content['src_port'],
-                        "tipv"      : "ipv4",
-                        "tadr"      : content['dst_ip'],
-                        "tprot"     : "tcp",
-                        "tport"     : "undefined",
-                      }
-
-            REQUEST = {
-                        "description" : "Conpot Honeypot",
-                      }
+                REQUEST = {
+                            "description" : "Conpot Honeypot",
+                        }
 
 
-            # Collect additional Data
+                # Collect additional Data
 
-            ADATA =   {
-                        "conpot_event_type"    :   content['event_type'],
-                        "conpot_data_type"     :   content['data_type'],
-                        "conpot_sensor_id"     :   content['sensorid'],
-                        "conpot_request"       :   content['request'],
-                        "conpot_id"            :   content['id'],
-                        "conpot_response"      :   content['response']
-                      }
+                ADATA =   {
+                            "conpot_event_type"    :   content['event_type'],
+                            "conpot_data_type"     :   content['data_type'],
+                            "conpot_sensor_id"     :   content['sensorid'],
+                            "conpot_request"       :   content['request'],
+                            "conpot_id"            :   content['id'],
+                            "conpot_response"      :   content['response']
+                        }
 
-            # generate template and send
+                # generate template and send
 
-            esm = buildews(esm,DATA,REQUEST,ADATA)
-            jesm = buildjson(jesm,DATA,REQUEST,ADATA)
+                esm = buildews(esm,DATA,REQUEST,ADATA)
+                jesm = buildjson(jesm,DATA,REQUEST,ADATA)
 
-            countme(MODUL,'fileline',-2,ECFG)
-            countme(MODUL,'daycounter', -2,ECFG)
+                countme(MODUL,'fileline',-2,ECFG)
+                countme(MODUL,'daycounter', -2,ECFG)
 
-            if ECFG["a.verbose"] is True:
-                verbosemode(MODUL,DATA,REQUEST,ADATA)
+                if ECFG["a.verbose"] is True:
+                    verbosemode(MODUL,DATA,REQUEST,ADATA)
 
     # Cleaning linecache
     clearcache()
