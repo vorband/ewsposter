@@ -25,6 +25,7 @@ import urllib
 import hpfeeds
 import fnmatch
 import json
+import OpenSSL.SSL
 
 name = "EWS Poster"
 version = "v1.8.4b"
@@ -97,6 +98,10 @@ def ewswebservice(ems):
 
     except requests.exceptions.HTTPError, e:
         logme(MODUL,"HTTP Errorcode != 200 (%s)" % (str(e)) ,("LOG","VERBOSE"),ECFG)
+        return False
+
+    except OpenSSL.SSL.WantWriteError, e:
+        logme(MODUL,"OpenSSL Write Buffer too small",("LOG","VERBOSE"),ECFG)
         return False
 
 
@@ -191,7 +196,7 @@ def buildews(esm,DATA,REQUEST,ADATA):
     if int(esm.xpath('count(//Alert)')) >= 100:
         sendews(esm)
         esm = ewsauth(ECFG["username"],ECFG["token"])
-
+	   
     return esm
 
 
@@ -1168,18 +1173,20 @@ def conpot():
             try:
                 content = json.loads(line)
             except ValueError, e:
-                logme(MODUL,"Invalid json entry found in conpot log file, skipping to next line...",("P1"),ECFG)
+                logme(MODUL,"Invalid json entry found in line "+str(I)+", skipping entry.",("P3"),ECFG)
+                countme(MODUL,'fileline',-2,ECFG)
+                countme(MODUL,'daycounter', -2,ECFG)
                 pass # invalid json
             else:
                 DATA =    {
                             "aid"       : HONEYPOT["nodeid"],
-                            "timestamp" : "%s-%s-%s %s" % (content['timestamp'][0:4], content['timestamp'][5:7], content['timestamp'][8:10], content['timestamp'][11:19]]),
-                            "sadr"      : content['src_ip'],
+                            "timestamp" : "%s-%s-%s %s" % (content['timestamp'][0:4], content['timestamp'][5:7], content['timestamp'][8:10], content['timestamp'][11:19]),
+                            "sadr"      : "%s" % content['src_ip'],
                             "sipv"      : "ipv4",
                             "sprot"     : "tcp",
                             "sport"     : "%d" % content['src_port'],
                             "tipv"      : "ipv4",
-                            "tadr"      : content['dst_ip'],
+                            "tadr"      : "%s" % content['dst_ip'],
                             "tprot"     : "tcp",
                             "tport"     : "undefined",
                         }
@@ -1192,12 +1199,12 @@ def conpot():
                 # Collect additional Data
 
                 ADATA =   {
-                            "conpot_event_type"    :   content['event_type'],
-                            "conpot_data_type"     :   content['data_type'],
-                            "conpot_sensor_id"     :   content['sensorid'],
-                            "conpot_request"       :   content['request'],
-                            "conpot_id"            :   content['id'],
-                            "conpot_response"      :   content['response']
+                            "conpot_event_type"    :   "%s" % content['event_type'],
+                            "conpot_data_type"     :   "%s" % content['data_type'],
+                            "conpot_sensor_id"     :   "%s" % content['sensorid'],
+                            "conpot_request"       :   "%s" % content['request'],
+                            "conpot_id"            :   "%s" % content['id'],
+                            "conpot_response"      :   "%s" % content['response']
                         }
 
                 # generate template and send
