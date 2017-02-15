@@ -1173,7 +1173,7 @@ def conpot():
             else:
                 DATA =    {
                             "aid"       : HONEYPOT["nodeid"],
-                            "timestamp" : "%s-%s-%s %s" % (content['timestamp'][0:4], content['timestamp'][4:6], content['timestamp'][6:8], content['timestamp'][9:17]),
+                            "timestamp" : "%s-%s-%s %s" % (content['timestamp'][0:4], content['timestamp'][5:7], content['timestamp'][8:10], content['timestamp'][11:19]]),
                             "sadr"      : content['src_ip'],
                             "sipv"      : "ipv4",
                             "sprot"     : "tcp",
