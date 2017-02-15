@@ -84,7 +84,7 @@ def ecfg(name,version):
     else:
         ECFG["path2"] = ""
 
-    if args.modul and args.modul == "glastopfv3" or args.modul == "glastopfv2" or args.modul == "kippo" or args.modul == "dionaea" or args.modul == "honeytrap" or args.modul == "rdpdetect" or args.modul == "emobility":
+    if args.modul and args.modul == "glastopfv3" or args.modul == "glastopfv2" or args.modul == "kippo" or args.modul == "dionaea" or args.modul == "honeytrap" or args.modul == "rdpdetect" or args.modul == "emobility" or args.modul == "conpot":
         ECFG["a.modul"] = args.modul
     else:
         ECFG["a.modul"] = ""
