@@ -15,6 +15,7 @@ username = <your ews portal username>
 token = <your ews portal token>
 rhost_first = https://<your ews portal 1>
 rhost_second = https://<your ews portal 2>
+ignorecert = false
 
 [HPFEED]
 hpfeed = false
@@ -51,6 +52,11 @@ mysqldb = <your mysql db for glastopf>
 mysqluser = <your user for this db>
 mysqlpw = <your password>
 malwaredir = /opt/honeypot/kippo/downloads
+
+[COWRIE]
+cowrie = false
+nodeid = <your unique analyzer id>
+logfile = /opt/cowrie/cowrie.json
 
 [DIONAEA]
 dionaea = false
