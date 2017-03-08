@@ -53,6 +53,11 @@ mysqluser = <your user for this db>
 mysqlpw = <your password>
 malwaredir = /opt/honeypot/kippo/downloads
 
+[COWRIE]
+cowrie = false
+nodeid = <your unique analyzer id>
+logfile = /opt/cowrie/cowrie.json
+
 [DIONAEA]
 dionaea = false
 nodeid =  <your unique analyzer id>

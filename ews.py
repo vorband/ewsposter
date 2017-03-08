@@ -10,6 +10,7 @@ import hashlib
 from linecache import getline, clearcache
 from datetime import datetime
 from lxml import etree
+from copy import deepcopy
 
 from moduls.exml import ewsauth, ewsalert
 from moduls.einit import locksocket, ecfg, daycounterreset
@@ -28,7 +29,7 @@ import json
 import OpenSSL.SSL
 
 name = "EWS Poster"
-version = "v1.8.4b"
+version = "v1.8.5b"
 
 
 def ewswebservice(ems):
@@ -687,6 +688,173 @@ def kippo():
         logme(MODUL,"%s EWS alert records send ..." % (x+y-1),("P2"),ECFG)
     return
 
+def cowrie():
+
+    MODUL  = "COWRIE"
+    logme(MODUL,"Starting Cowrie Modul.",("P1"),ECFG)
+
+    # collect honeypot config dic
+
+    ITEMS  = ("cowrie","nodeid","logfile")
+    HONEYPOT = readcfg(MODUL,ITEMS,ECFG["cfgfile"])
+
+    HONEYPOT["ip"] = readonecfg(MODUL,"ip", ECFG["cfgfile"])
+
+    if HONEYPOT["ip"].lower() == "false" or HONEYPOT["ip"].lower() == "null":
+       HONEYPOT["ip"] = ECFG["ip"]
+
+    # logfile file exists ?
+
+    if os.path.isfile(HONEYPOT["logfile"]) is False:
+        logme(MODUL,"[ERROR] Missing LogFile " + HONEYPOT["logfile"] + ". Skip !",("P3","LOG"),ECFG)
+    
+    # count limit
+
+    imin = int(countme(MODUL,'fileline',-1,ECFG))
+
+    if int(ECFG["sendlimit"]) > 0:
+        logme(MODUL,"Send Limit is set to : " + str(ECFG["sendlimit"]) + ". Adapting to limit!",("P1"),ECFG)
+
+    I = 0 ; x = 0 ; y = 1
+
+    esm = ewsauth(ECFG["username"],ECFG["token"])
+    jesm = ""
+    
+    # dict to gather session information
+    cowriesessions={}
+    sessionstosend=[]
+    
+
+    while True:
+    
+        x,y = viewcounter(MODUL,x,y)
+
+        I += 1
+
+        if int(ECFG["sendlimit"]) > 0 and I > int(ECFG["sendlimit"]):
+            break
+
+        line = getline(HONEYPOT["logfile"],(imin + I)).rstrip()
+        currentline=imin + I
+
+        if len(line) == 0:
+            break
+        else:
+            # parse json
+            try:
+                content = json.loads(line)
+            except ValueError, e:
+                logme(MODUL,"Invalid json entry found in line "+str(I)+", skipping entry.",("P3"),ECFG)
+                countme(MODUL,'fileline',-2,ECFG)
+                countme(MODUL,'daycounter', -2,ECFG)
+                pass # invalid json
+            else:
+                # if new session is started, store session-related info 
+                if (content['eventid'] == "cowrie.session.connect"):
+                    # create empty session content: structure will be the same as kippo
+                    # | id  | username | password | success | logintimestamp | session | sessionstarttime| sessionendtime | ip | cowrieip | version| src_port|dst_port
+                    cowriesessions[content["session"]]=[I,'','','','',content["session"],content["timestamp"],'',content["src_ip"],content["sensor"],'',content["src_port"],content["dst_port"] ]
+                
+                # store correponding ssh client version
+                if (content['eventid'] == "cowrie.client.version"):
+                    if content["session"] in cowriesessions:
+                        cowriesessions[content["session"]][10]=content["version"]
+                
+                # create successful login 
+                if (content['eventid'] == "cowrie.login.success"):
+                    if content["session"] in cowriesessions:
+                        cowriesessions[content["session"]][0]=currentline
+                        cowriesessions[content["session"]][3]="Success"
+                        cowriesessions[content["session"]][1]=content["username"]
+                        cowriesessions[content["session"]][2]=content["password"]
+                        cowriesessions[content["session"]][4]=content["timestamp"]
+                        sessionstosend.append(deepcopy(cowriesessions[content["session"]]))
+                        #print "SUCCESS: " +str(currentline) 
+
+                # create failed login
+                elif (content['eventid'] == "cowrie.login.failed"):
+                    if content["session"] in cowriesessions:
+                        cowriesessions[content["session"]][0]=currentline
+                        cowriesessions[content["session"]][3]="Fail"
+                        cowriesessions[content["session"]][1]=content["username"]
+                        cowriesessions[content["session"]][2]=content["password"]
+                        cowriesessions[content["session"]][4]=content["timestamp"]
+                        sessionstosend.append(deepcopy(cowriesessions[content["session"]]))
+                        #print "FAIL: " +str(currentline) 
+
+                # store session close
+                if (content['eventid'] == "cowrie.session.closed"):
+                    for n,i in enumerate(sessionstosend):
+                        if (i[5]==content["session"]):
+                            i[7]=content["timestamp"]
+
+                            
+    # loop through list of sessions to send
+    for key in sessionstosend:
+        if key[12]==2223:
+            service="Telnet"
+            serviceport="23"
+        elif key[12]==2222:
+            service="SSH"
+            serviceport="22"
+        else:
+            service="SSH"
+            serviceport="22"
+
+        DATA =    {
+            "aid"       : HONEYPOT["nodeid"],
+            "timestamp" : str(key[4]),
+            "sadr"      : str(key[8]),
+            "sipv"      : "ipv" + ip4or6(str(key[8])),
+            "sprot"     : "tcp",
+            "sport"     : str(key[11]),
+            "tipv"      : "ipv" + ip4or6(HONEYPOT["ip"]),
+            "tadr"      : HONEYPOT["ip"],
+            "tprot"     : "tcp",
+            "tport"     : serviceport
+            }
+
+        REQUEST = {
+                    "description" : service + " Honeypot Cowrie",
+                  }
+
+        # Collect additional Data
+
+        login = str(key[3])
+
+        ADATA = {
+                 "sessionid"    : str(key[5]),
+                 "starttime"   : str(key[6]),
+                 "endtime"     : str(key[7]),
+                 "version"     : str(key[10]),
+                 "login"       : login,
+                 "username"    : str(key[1]),
+                 "password"    : str(key[2])
+                }
+
+        # generate template and send
+
+        esm = buildews(esm,DATA,REQUEST,ADATA)
+        jesm = buildjson(jesm,DATA,REQUEST,ADATA)
+
+        countme(MODUL,'fileline',key[0],ECFG)
+        countme(MODUL,'daycounter', key[0],ECFG)
+
+        if ECFG["a.verbose"] is True:
+            verbosemode(MODUL,DATA,REQUEST,ADATA)
+
+
+    # Cleaning linecache
+    clearcache()
+
+    if int(esm.xpath('count(//Alert)')) > 0:
+        sendews(esm)
+
+    writejson(jesm)
+
+    if y  > 1:
+        logme(MODUL,"%s EWS alert records send ..." % (x+y-2),("P2"),ECFG)
+    return
 
 def dionaea():
 
@@ -1256,7 +1424,7 @@ if __name__ == "__main__":
             sender()
 
 
-        for i in ("glastopfv3", "glastopfv2", "kippo", "dionaea", "honeytrap", "rdpdetect", "emobility", "conpot"):
+        for i in ("glastopfv3", "glastopfv2", "kippo", "dionaea", "honeytrap", "rdpdetect", "emobility", "conpot", "cowrie"):
 
             if ECFG["a.modul"]:
                 if ECFG["a.modul"] == i:
