@@ -769,7 +769,6 @@ def cowrie():
                         cowriesessions[content["session"]][2]=content["password"]
                         cowriesessions[content["session"]][4]=content["timestamp"]
                         sessionstosend.append(deepcopy(cowriesessions[content["session"]]))
-                        #print "SUCCESS: " +str(currentline) 
 
                 # create failed login
                 elif (content['eventid'] == "cowrie.login.failed"):
@@ -780,7 +779,6 @@ def cowrie():
                         cowriesessions[content["session"]][2]=content["password"]
                         cowriesessions[content["session"]][4]=content["timestamp"]
                         sessionstosend.append(deepcopy(cowriesessions[content["session"]]))
-                        #print "FAIL: " +str(currentline) 
 
                 # store session close
                 if (content['eventid'] == "cowrie.session.closed"):
