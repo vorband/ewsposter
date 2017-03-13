@@ -715,7 +715,7 @@ def cowrie():
     if int(ECFG["sendlimit"]) > 0:
         logme(MODUL,"Send Limit is set to : " + str(ECFG["sendlimit"]) + ". Adapting to limit!",("P1"),ECFG)
 
-    I = 0 ; x = 0 ; y = 1
+    I = 0 ; x = 0 ; y = 1; J = 0
 
     esm = ewsauth(ECFG["username"],ECFG["token"])
     jesm = ""
@@ -723,16 +723,10 @@ def cowrie():
     # dict to gather session information
     cowriesessions={}
     sessionstosend=[]
-    
 
     while True:
-    
-        x,y = viewcounter(MODUL,x,y)
 
         I += 1
-
-        if int(ECFG["sendlimit"]) > 0 and I > int(ECFG["sendlimit"]):
-            break
 
         line = getline(HONEYPOT["logfile"],(imin + I)).rstrip()
         currentline=imin + I
@@ -744,16 +738,14 @@ def cowrie():
             try:
                 content = json.loads(line)
             except ValueError, e:
-                logme(MODUL,"Invalid json entry found in line "+str(I)+", skipping entry.",("P3"),ECFG)
-                countme(MODUL,'fileline',-2,ECFG)
-                countme(MODUL,'daycounter', -2,ECFG)
+                logme(MODUL,"Invalid json entry found in line "+str(currentline)+", skipping entry.",("P3"),ECFG)
                 pass # invalid json
             else:
                 # if new session is started, store session-related info 
                 if (content['eventid'] == "cowrie.session.connect"):
-                    # create empty session content: structure will be the same as kippo
-                    # | id  | username | password | success | logintimestamp | session | sessionstarttime| sessionendtime | ip | cowrieip | version| src_port|dst_port
-                    cowriesessions[content["session"]]=[I,'','','','',content["session"],content["timestamp"],'',content["src_ip"],content["sensor"],'',content["src_port"],content["dst_port"] ]
+                    # create empty session content: structure will be the same as kippo, add dst port and commands
+                    # | id  | username | password | success | logintimestamp | session | sessionstarttime| sessionendtime | ip | cowrieip | version| src_port|dst_port|commands
+                    cowriesessions[content["session"]]=[currentline,'','','','',content["session"],content["timestamp"],'',content["src_ip"],content["sensor"],'',content["src_port"],content["dst_port"],'' ]
                 
                 # store correponding ssh client version
                 if (content['eventid'] == "cowrie.client.version"):
@@ -762,6 +754,8 @@ def cowrie():
                 
                 # create successful login 
                 if (content['eventid'] == "cowrie.login.success"):
+                    if int(ECFG["sendlimit"]) > 0 and J >= int(ECFG["sendlimit"]):
+                         break
                     if content["session"] in cowriesessions:
                         cowriesessions[content["session"]][0]=currentline
                         cowriesessions[content["session"]][3]="Success"
@@ -769,9 +763,12 @@ def cowrie():
                         cowriesessions[content["session"]][2]=content["password"]
                         cowriesessions[content["session"]][4]=content["timestamp"]
                         sessionstosend.append(deepcopy(cowriesessions[content["session"]]))
+                        J+=1
 
                 # create failed login
                 elif (content['eventid'] == "cowrie.login.failed"):
+                    if int(ECFG["sendlimit"]) > 0 and J >= int(ECFG["sendlimit"]):
+                        break
                     if content["session"] in cowriesessions:
                         cowriesessions[content["session"]][0]=currentline
                         cowriesessions[content["session"]][3]="Fail"
@@ -779,6 +776,15 @@ def cowrie():
                         cowriesessions[content["session"]][2]=content["password"]
                         cowriesessions[content["session"]][4]=content["timestamp"]
                         sessionstosend.append(deepcopy(cowriesessions[content["session"]]))
+                        J+=1
+
+
+                # store terminal input / commands 
+                if (content['eventid'] == "cowrie.command.input"):
+                    for n,i in enumerate(sessionstosend):
+                        if (i[5]==content["session"]):
+                            i[13]=i[13] + "\n" +content["input"]
+                        
 
                 # store session close
                 if (content['eventid'] == "cowrie.session.closed"):
@@ -789,6 +795,10 @@ def cowrie():
                             
     # loop through list of sessions to send
     for key in sessionstosend:
+        
+        x,y = viewcounter(MODUL,x,y)
+
+        # map ssh ports for t-pot
         if key[12]==2223:
             service="Telnet"
             serviceport="23"
@@ -801,7 +811,7 @@ def cowrie():
 
         DATA =    {
             "aid"       : HONEYPOT["nodeid"],
-            "timestamp" : str(key[4]),
+            "timestamp" : "%s-%s-%s %s" % (key[4][0:4], key[4][5:7], key[4][8:10], key[4][11:19]),
             "sadr"      : str(key[8]),
             "sipv"      : "ipv" + ip4or6(str(key[8])),
             "sprot"     : "tcp",
@@ -817,17 +827,21 @@ def cowrie():
                   }
 
         # Collect additional Data
-
         login = str(key[3])
-
+        if (key[7] !=""):
+            endtime = "%s-%s-%s %s" % (key[7][0:4], key[7][5:7], key[7][8:10], key[7][11:19])
+        else: 
+            endtime = ""
+        
         ADATA = {
-                 "sessionid"    : str(key[5]),
-                 "starttime"   : str(key[6]),
-                 "endtime"     : str(key[7]),
+                 "sessionid"   : str(key[5]),
+                 "starttime"   : "%s-%s-%s %s" % (key[6][0:4], key[6][5:7], key[6][8:10], key[6][11:19]),
+                 "endtime"     : endtime,
                  "version"     : str(key[10]),
                  "login"       : login,
                  "username"    : str(key[1]),
-                 "password"    : str(key[2])
+                 "password"    : str(key[2]),
+                 "input"       : str(key[13])
                 }
 
         # generate template and send
@@ -836,7 +850,7 @@ def cowrie():
         jesm = buildjson(jesm,DATA,REQUEST,ADATA)
 
         countme(MODUL,'fileline',key[0],ECFG)
-        countme(MODUL,'daycounter', key[0],ECFG)
+        countme(MODUL,'daycounter', -2,ECFG)
 
         if ECFG["a.verbose"] is True:
             verbosemode(MODUL,DATA,REQUEST,ADATA)
@@ -851,7 +865,7 @@ def cowrie():
     writejson(jesm)
 
     if y  > 1:
-        logme(MODUL,"%s EWS alert records send ..." % (x+y-2),("P2"),ECFG)
+        logme(MODUL,"%s EWS alert records send ..." % (x+y-1),("P2"),ECFG)
     return
 
 def dionaea():
@@ -1316,7 +1330,7 @@ def conpot():
     if int(ECFG["sendlimit"]) > 0:
         logme(MODUL,"Send Limit is set to : " + str(ECFG["sendlimit"]) + ". Adapting to limit!",("P1"),ECFG)
 
-    I = 0 ; x = 0 ; y = 1
+    I = 0 ; x = 0 ; y = 1 ; J = 0
 
     esm = ewsauth(ECFG["username"],ECFG["token"])
     jesm = ""
@@ -1331,6 +1345,7 @@ def conpot():
             break
 
         line = getline(HONEYPOT["logfile"],(imin + I)).rstrip()
+        currentline=imin+I 
 
         if len(line) == 0:
             break
@@ -1339,9 +1354,9 @@ def conpot():
             try:
                 content = json.loads(line)
             except ValueError, e:
-                logme(MODUL,"Invalid json entry found in line "+str(I)+", skipping entry.",("P3"),ECFG)
+                logme(MODUL,"Invalid json entry found in line "+str(currentline)+", skipping entry.",("P3"),ECFG)
                 countme(MODUL,'fileline',-2,ECFG)
-                countme(MODUL,'daycounter', -2,ECFG)
+                J+=1
                 pass # invalid json
             else:
                 DATA =    {
@@ -1393,7 +1408,7 @@ def conpot():
     writejson(jesm)
 
     if y  > 1:
-        logme(MODUL,"%s EWS alert records send ..." % (x+y-2),("P2"),ECFG)
+        logme(MODUL,"%s EWS alert records send ..." % (x+y-2-J),("P2"),ECFG)
     return
 
 ###############################################################################
