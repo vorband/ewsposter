@@ -86,3 +86,8 @@ logfile = /work2/ewsposter/emobility/emobility.log
 conpot = false
 nodeid = <your unique analyzer id>
 logfile = /opt/conpot/conpot.json
+
+[ELASTICPOT]
+elasticpot = false
+nodeid = <your unique analyzer id>
+logfile = /opt/elasticpot/log/elasticpot.log
