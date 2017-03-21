@@ -1477,22 +1477,22 @@ def elasticpot():
                             "sprot"     : "tcp",
                             "sport"     : "%d" % content["src_port"],
                             "tipv"      : "ipv" + ip4or6(ECFG["ip"]),
-                            "tadr"      : ECFG["ip"],
+                            "tadr"      : "%s" % content["dest_ip"],
                             "tprot"     : "tcp",
                             "tport"     : "%d" % content["dest_port"],
                         }
 
                 REQUEST = {
-                            "description" : "Elastic Search Honeypot : Elasticpot",
-                            "url"         : urllib.quote(content["honeypot"]["query"].encode('ascii', 'ignore'))
+                            "description" : "ElasticSearch Honeypot : Elasticpot",
+                            "url"         : urllib.quote(content["honeypot"]["query"].encode('ascii', 'ignore')),
+                            "raw"         : "%s" % content["honeypot"]["raw"]
+
                         }
 
                 # Collect additional Data
 
                 ADATA = {
-                        "eventid"    : currentline,
-                        "eventtype"  : "%s" % content["event_type"],
-                        "name"       : "%s" % content["honeypot"]["name"]
+                        "postdata"       : "%s" % content["honeypot"]["postdata"]
                         }
 
 
