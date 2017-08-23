@@ -95,4 +95,4 @@ logfile = /opt/elasticpot/log/elasticpot.log
 [SURICATA]
 suricata = false
 nodeid = <your unique analyzer id>
-logfile /opt/suricata/logs/suricata_ews.log
+logfile = /opt/suricata/logs/suricata_ews.log
