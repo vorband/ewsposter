@@ -30,7 +30,7 @@ import OpenSSL.SSL
 import ipaddress
 
 name = "EWS Poster"
-version = "v1.8.7b"
+version = "v1.8.8b"
 
 
 def ewswebservice(ems):
@@ -926,21 +926,33 @@ def dionaea():
 
         # filter empty remote_host
 
-        if row["remote_host"] == "": 
+        if row["remote_host"] == "":
             countme(MODUL,'sqliteid',row["connection"],ECFG)
             continue
+
+        # fix docker problems with dionaea IPs
+        if '::ffff:' in row["remote_host"]:
+            remoteHost= row["remote_host"].split('::ffff:')[1]
+        else:
+            remoteHost = row["remote_host"]
+
+        if '::ffff:' in row["local_host"]:
+            localHost = row["local_host"].split('::ffff:')[1]
+        else:
+            localHost = row["local_host"]
+
 
         # Prepair and collect Alert Data
 
         DATA =   {
                     "aid"       : HONEYPOT["nodeid"],
                     "timestamp" : datetime.fromtimestamp(int(row["connection_timestamp"])).strftime('%Y-%m-%d %H:%M:%S'),
-                    "sadr"      : str(row["remote_host"]),
-                    "sipv"      : "ipv" + ip4or6(str(row["remote_host"])),
+                    "sadr"      : str(remoteHost),
+                    "sipv"      : "ipv" + ip4or6(str(remoteHost)),
                     "sprot"     : str(row["connection_type"]),
                     "sport"     : str(row["remote_port"]),
-                    "tipv"      : "ipv" + ip4or6(str(row["local_host"])),
-                    "tadr"      : str(row["local_host"]),
+                    "tipv"      : "ipv" + ip4or6(str(localHost)),
+                    "tadr"      : str(localHost),
                     "tprot"     : str(row["connection_type"]),
                     "tport"     : str(row["local_port"]),
                   }
