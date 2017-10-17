@@ -15,7 +15,7 @@ from copy import deepcopy
 from moduls.exml import ewsauth, ewsalert
 from moduls.einit import locksocket, ecfg, daycounterreset
 from moduls.elog import logme
-from moduls.etoolbox import ip4or6, readcfg, readonecfg, timestamp, calcminmax, countme
+from moduls.etoolbox import ip4or6, readcfg, readonecfg, timestamp, calcminmax, countme, checkForPublicIP, getOwnExternalIP, getHostname, getOwnInternalIP, resolveHost
 
 import sqlite3
 import MySQLdb.cursors
@@ -30,8 +30,16 @@ import OpenSSL.SSL
 import ipaddress
 
 name = "EWS Poster"
-version = "v1.8.8b"
+version = "v1.8.9"
 
+
+def init():
+    global hostname
+    global externalIP
+    global internalIP
+    hostname = getHostname()
+    externalIP=getOwnExternalIP(readonecfg(MODUL,"ip", ECFG["cfgfile"]))
+    internalIP=getOwnInternalIP()
 
 def ewswebservice(ems):
 
@@ -323,10 +331,7 @@ def glastopfv3():
     ITEMS  = ("glastopfv3","nodeid","sqlitedb","malwaredir")
     HONEYPOT = readcfg(MODUL,ITEMS,ECFG["cfgfile"])
 
-    HONEYPOT["ip"] = readonecfg(MODUL,"ip", ECFG["cfgfile"])
-
-    if HONEYPOT["ip"].lower() == "false" or HONEYPOT["ip"].lower() == "null":
-       HONEYPOT["ip"] = ECFG["ip"]
+    HONEYPOT["ip"] = externalIP
 
     # Malwaredir exist ? Issue in Glastopf ! RFI Directory first create when the first RFI was downloaded
 
@@ -337,7 +342,7 @@ def glastopfv3():
     # is sqlitedb exist ?
 
     if os.path.isfile(HONEYPOT["sqlitedb"]) is False:
-        logme(MODUL,"[INFO] Missing sqlitedb file " + HONEYPOT["sqlitedb"] + ". Skip !",("P3","LOG"),ECFG)
+        logme(MODUL,"[INFO] Missing sqlitedb file " + HONEYPOT["sqlitedb"] + ". Skipping !",("P3","LOG"),ECFG)
         return
 
     # open database
@@ -413,7 +418,11 @@ def glastopfv3():
         # Collect additional Data
 
         ADATA = {
-                 "sqliteid"    : row ["id"],
+                    "sqliteid"    : row ["id"],
+                    "hostname": hostname,
+                    "externalIP": externalIP,
+                    "internalIP": internalIP
+
                 }
 
         if "request_method" in  row.keys():
@@ -549,7 +558,10 @@ def glastopfv2():
         ADATA = {
                  "mysqlid"   : str(row ["id"]),
                  "host"      : row["host"],
-                }
+                 "hostname": hostname,
+                 "externalIP": externalIP,
+                 "internalIP": internalIP
+        }
 
         if row["victim"] != "None":
             ADATA["victim"] = row["victim"]
@@ -660,13 +672,16 @@ def kippo():
             login = "Success"
 
         ADATA = {
-                 "sqliteid"    : str(row["id"]),
-                 "starttime"   : str(row["starttime"]),
-                 "endtime"     : str(row["endtime"]),
-                 "version"     : str(row["version"]),
-                 "login"       : login,
-                 "username"    : str(row["username"]),
-                 "password"    : str(row["password"])
+                    "sqliteid"    : str(row["id"]),
+                    "starttime"   : str(row["starttime"]),
+                    "endtime"     : str(row["endtime"]),
+                    "version"     : str(row["version"]),
+                    "login"       : login,
+                    "username"    : str(row["username"]),
+                    "password"    : str(row["password"]),
+                    "hostname": hostname,
+                    "externalIP": externalIP,
+                    "internalIP": internalIP
                 }
 
         esm = buildews(esm,DATA,REQUEST,ADATA)
@@ -745,9 +760,9 @@ def cowrie():
                 # if new session is started, store session-related info 
                 if (content['eventid'] == "cowrie.session.connect"):
                     # create empty session content: structure will be the same as kippo, add dst port and commands
-                    # | id  | username | password | success | logintimestamp | session | sessionstarttime| sessionendtime | ip | cowrieip | version| src_port|dst_port|commands
-                    cowriesessions[content["session"]]=[currentline,'','','','',content["session"],content["timestamp"],'',content["src_ip"],content["sensor"],'',content["src_port"],content["dst_port"],'' ]
-                
+                    # | id  | username | password | success | logintimestamp | session | sessionstarttime| sessionendtime | ip | cowrieip | version| src_port|dst_port|dst_ip|commands
+                    cowriesessions[content["session"]]=[currentline,'','','','',content["session"],content["timestamp"],'',content["src_ip"],content["sensor"],'',content["src_port"],content["dst_port"],content["dst_ip"],"" ]
+
                 # store correponding ssh client version
                 if (content['eventid'] == "cowrie.client.version"):
                     if content["session"] in cowriesessions:
@@ -784,7 +799,7 @@ def cowrie():
                 if (content['eventid'] == "cowrie.command.input"):
                     for n,i in enumerate(sessionstosend):
                         if (i[5]==content["session"]):
-                            i[13]=i[13] + "\n" +content["input"]
+                            i[14]=i[14] + "\n" +content["input"]
                         
 
                 # store session close
@@ -818,7 +833,7 @@ def cowrie():
             "sprot"     : "tcp",
             "sport"     : str(key[11]),
             "tipv"      : "ipv" + ip4or6(HONEYPOT["ip"]),
-            "tadr"      : HONEYPOT["ip"],
+            "tadr"      : str(key[13]),
             "tprot"     : "tcp",
             "tport"     : serviceport
             }
@@ -842,7 +857,10 @@ def cowrie():
                  "login"       : login,
                  "username"    : str(key[1]),
                  "password"    : str(key[2]),
-                 "input"       : str(key[13])
+                 "input"       : str(key[14]),
+                 "hostname": hostname,
+                 "externalIP": externalIP,
+                 "internalIP": internalIP
                 }
 
         # generate template and send
@@ -870,7 +888,6 @@ def cowrie():
     return
 
 def dionaea():
-
     MODUL  = "DIONAEA"
     logme(MODUL,"Starting Dionaea Modul.",("P1"),ECFG)
 
@@ -941,12 +958,11 @@ def dionaea():
         else:
             localHost = row["local_host"]
 
-
-        # Prepair and collect Alert Data
+        # prepare and collect Alert Data
 
         DATA =   {
                     "aid"       : HONEYPOT["nodeid"],
-                    "timestamp" : datetime.fromtimestamp(int(row["connection_timestamp"])).strftime('%Y-%m-%d %H:%M:%S'),
+                    "timestamp" : datetime.utcfromtimestamp(int(row["connection_timestamp"])).strftime('%Y-%m-%d %H:%M:%S'),
                     "sadr"      : str(remoteHost),
                     "sipv"      : "ipv" + ip4or6(str(remoteHost)),
                     "sprot"     : str(row["connection_type"]),
@@ -977,7 +993,11 @@ def dionaea():
 
         ADATA = {
                  "sqliteid"    : str(row["connection"]),
-                }
+                 "hostname": hostname,
+                 "externalIP": externalIP,
+                 "internalIP": internalIP
+
+        }
 
         # generate template and send
 
@@ -1108,7 +1128,10 @@ def honeytrap():
             # Collect additional Data
 
             ADATA = {
-                    }
+                "hostname": hostname,
+                "externalIP": externalIP,
+                "internalIP": internalIP
+            }
 
             # generate template and send
 
@@ -1202,7 +1225,10 @@ def rdpdetect():
             # Collect additional Data
 
             ADATA =   {
-                      }
+                "hostname": hostname,
+                "externalIP": externalIP,
+                "internalIP": internalIP
+            }
 
             # generate template and send
 
@@ -1296,6 +1322,9 @@ def emobility():
             # Collect additional Data
 
             ADATA =   {
+                "hostname": hostname,
+                "externalIP": externalIP,
+                "internalIP": internalIP
                       }
 
             # generate template and send
@@ -1398,7 +1427,11 @@ def conpot():
                             "conpot_sensor_id"     :   "%s" % content['sensorid'],
                             "conpot_request"       :   "%s" % content['request'],
                             "conpot_id"            :   "%s" % content['id'],
-                            "conpot_response"      :   "%s" % content['response']
+                            "conpot_response"      :   "%s" % content['response'],
+                            "hostname": hostname,
+                            "externalIP": externalIP,
+                            "internalIP": internalIP
+
                         }
 
                 # generate template and send
@@ -1480,6 +1513,12 @@ def elasticpot():
                 if  content["honeypot"]["query"] == os.sep or content["honeypot"]["query"] == "/index.do?hash=DEADBEEF&activate=1":
                     countme(MODUL,'fileline',-2,ECFG)
                     continue
+                try:
+                    if checkForPublicIP(content["dest_ip"]):
+                        pubIP=content["dest_ip"]
+                except:
+                    pubIP=externalIP
+
 
                 # Prepair and collect Alert Data
                 DATA = {
@@ -1488,11 +1527,11 @@ def elasticpot():
                             "sadr"      : "%s" % content["src_ip"],
                             "sipv"      : "ipv" + ip4or6(content["src_ip"]),
                             "sprot"     : "tcp",
-                            "sport"     : "%d" % content["src_port"],
+                            "sport"     : "%s" % content["src_port"],
                             "tipv"      : "ipv" + ip4or6(ECFG["ip"]),
-                            "tadr"      : "%s" % content["dest_ip"],
+                            "tadr"      : "%s" % pubIP,
                             "tprot"     : "tcp",
-                            "tport"     : "%d" % content["dest_port"],
+                            "tport"     : "%s" % content["dest_port"],
                         }
 
                 REQUEST = {
@@ -1505,8 +1544,12 @@ def elasticpot():
                 # Collect additional Data
 
                 ADATA = {
-                        "postdata"       : "%s" % content["honeypot"]["postdata"]
-                        }
+                        "postdata"       : "%s" % content["honeypot"]["postdata"],
+                        "hostname": hostname,
+                        "externalIP": externalIP,
+                        "internalIP": internalIP
+
+                }
 
 
                 # generate template and send
@@ -1660,6 +1703,7 @@ if __name__ == "__main__":
 
     global ECFG
     ECFG = ecfg(name,version)
+    init()
 
     lock = locksocket(name)
 

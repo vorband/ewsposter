@@ -25,7 +25,7 @@ def ecfg(name,version):
     parser.add_argument("-E","--ewsonly", help="only generate ews alerts files",action="store_true")
     parser.add_argument("-dcr","--daycounter", help="reset and log daycounters for all honeypots",action="store_true")
     parser.add_argument("-j","--jsonpath", help="Write JSON output file to path")
-    parser.add_argument("-L","--sendlimit", help="Set {xxx} for max alerts will send in one session", type=int, default=500, action="store")
+    parser.add_argument("-L","--sendlimit", help="Set {xxx} for max alerts will send in one session", type=int, action="store")
     parser.add_argument("-V","--version", help="show the EWS Poster Version",action="version", version=name + " " + version)
 
 
@@ -257,11 +257,14 @@ def locksocket(name):
     global lock_socket
 
     lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-
+    # debug dev macos
+    # return True
+    # end debug dev macos
     try:
         lock_socket.bind('\0' + name)
         return True
     except socket.error:
+        print("could not bind socket")
         return False
 
 def daycounterreset(lock,ECFG):
