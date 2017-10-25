@@ -964,11 +964,11 @@ def dionaea():
                     "timestamp" : datetime.utcfromtimestamp(int(row["connection_timestamp"])).strftime('%Y-%m-%d %H:%M:%S'),
                     "sadr"      : str(remoteHost),
                     "sipv"      : "ipv" + ip4or6(str(remoteHost)),
-                    "sprot"     : str(row["connection_type"]),
+                    "sprot"     : str(row["connection_transport"]),
                     "sport"     : str(row["remote_port"]),
                     "tipv"      : "ipv" + ip4or6(str(localHost)),
                     "tadr"      : str(localHost),
-                    "tprot"     : str(row["connection_type"]),
+                    "tprot"     : str(row["connection_transport"]),
                     "tport"     : str(row["local_port"]),
                   }
 
