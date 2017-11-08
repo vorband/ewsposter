@@ -17,9 +17,14 @@ def ewsauth(username,token):
 
 def ewsalert(esm,DATA,REQUEST,ADATA):
 
+    if "honeytrap" in REQUEST['description'].lower():
+        timezone="+0000"
+    else:
+        timezone = time.strftime('%z')
+
     Alert = etree.SubElement(esm,"Alert")
     etree.SubElement(Alert,"Analyzer",id=DATA["aid"])
-    etree.SubElement(Alert,"CreateTime",tz=time.strftime('%z')).text = DATA["timestamp"]
+    etree.SubElement(Alert,"CreateTime",tz=timezone).text= DATA["timestamp"]
     etree.SubElement(Alert,"Source",category=DATA["sipv"],port=DATA["sport"],protocol=DATA["sprot"]).text = DATA["sadr"]
     etree.SubElement(Alert,"Target",category=DATA["tipv"],port=DATA["tport"],protocol=DATA["tprot"]).text = DATA["tadr"]
     #etree.SubElement(Alert,"Request",type=urllib.quote(DATA["rtype"]),text=urllib.quote(DATA["rtext"])).text = urllib.quote(DATA["request"])
