@@ -18,14 +18,14 @@ def ecfg(name,version):
     parser.add_argument("-v","--verbose", help="set output verbosity",action="store_true")
     parser.add_argument("-d","--debug", help="set output debug",action="store_true")
     parser.add_argument("-l","--loop", help="Go in endless loop. Set {xx} for seconds to wait for next loop", type=int, default=0, action="store")
-    parser.add_argument("-m","--modul", help="only send alerts for this modul", choices=['glastopfv3','glastopfv2','kippo','dionaea','honeytrap','rdpdetect','emobility', 'conpot', 'cowrie', 'elasticpot', 'suricata'],action="store")
+    parser.add_argument("-m","--modul", help="only send alerts for this modul", choices=['glastopfv3','glastopfv2','kippo','dionaea','honeytrap','rdpdetect','emobility', 'conpot', 'cowrie', 'elasticpot', 'suricata', 'rdpy', 'mailoney', 'vnclowpot'],action="store")
     parser.add_argument("-s","--silent", help="silent mode without output",action="store_true")
     parser.add_argument("-i","--ignorecert", help="ignore certificate warnings",action="store_true")
     parser.add_argument("-S","--sendonly", help="only send unsend alerts",action="store_true")
     parser.add_argument("-E","--ewsonly", help="only generate ews alerts files",action="store_true")
     parser.add_argument("-dcr","--daycounter", help="reset and log daycounters for all honeypots",action="store_true")
     parser.add_argument("-j","--jsonpath", help="Write JSON output file to path")
-    parser.add_argument("-L","--sendlimit", help="Set {xxx} for max alerts will send in one session", type=int, default=500, action="store")
+    parser.add_argument("-L","--sendlimit", help="Set {xxx} for max alerts will send in one session", type=int, action="store")
     parser.add_argument("-V","--version", help="show the EWS Poster Version",action="version", version=name + " " + version)
 
 
@@ -84,7 +84,8 @@ def ecfg(name,version):
     else:
         ECFG["path2"] = ""
 
-    if args.modul and args.modul == "glastopfv3" or args.modul == "glastopfv2" or args.modul == "kippo" or args.modul == "dionaea" or args.modul == "honeytrap" or args.modul == "rdpdetect" or args.modul == "emobility" or args.modul == "conpot" or args.modul == "cowrie" or args.modul == "elasticpot"or args.modul == "suricata":
+    if args.modul and args.modul == "glastopfv3" or args.modul == "glastopfv2" or args.modul == "kippo" or args.modul == "dionaea" or args.modul == "honeytrap" or args.modul == "rdpdetect" or args.modul == "emobility" \
+            or args.modul == "conpot" or args.modul == "cowrie" or args.modul == "elasticpot"or args.modul == "suricata" or args.modul == "rdpy" or args.modul == "mailoney" or args.modul == "vnclowpot":
         ECFG["a.modul"] = args.modul
     else:
         ECFG["a.modul"] = ""
@@ -257,11 +258,14 @@ def locksocket(name):
     global lock_socket
 
     lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-
+    # debug dev macos
+    # return True
+    # end debug dev macos
     try:
         lock_socket.bind('\0' + name)
         return True
     except socket.error:
+        print("could not bind socket")
         return False
 
 def daycounterreset(lock,ECFG):

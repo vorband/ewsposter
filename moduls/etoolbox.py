@@ -6,6 +6,9 @@ import re
 import time
 import sys
 import os
+import ipaddress
+from requests import get
+import socket
 
 def countme(Section,Item,Count,ECFG):
 
@@ -92,6 +95,77 @@ def readonecfg(MODULE,item,FILE):
         return "FALSE"
     else:
         return "UNKNOW"
+
+def checkForPublicIP(ip):
+    return ipaddress.ip_address(ip).is_global
+
+def getOwnExternalIP(storedip):
+    # try MY_EXTIP from env
+    try:
+        if os.environ.get('MY_EXTIP') is not None:
+            if ipaddress.ip_address(unicode(os.environ.get('MY_EXTIP'))).is_global:
+                return os.environ.get('MY_EXTIP')
+    except:
+        # try the IP from ews.cfg
+        try:
+            if ipaddress.ip_address(unicode(storedip)).is_global:
+                return storedip
+            # try to resolve IP from external service
+            else:
+                try:
+                    extip = get('https://api.ipify.org', timeout=5).text
+                    if ipaddress.ip_address(unicode(extip)).is_global:
+                        return extip
+                    return storedip
+                except:
+                    print " => [ERROR] Could not determine a valid public IP"
+                    return storedip
+        except ValueError:
+            try:
+                extip = get('https://api.ipify.org', timeout=5).text
+                if ipaddress.ip_address(unicode(extip)).is_global:
+                    return extip
+                else:
+                    print " => [ERROR] Could not determine a valid public IP"
+                    return "0.0.0.0"
+            except:
+                print " => [ERROR] Could not determine a valid public IP"
+                return "0.0.0.0"
+    print " => [ERROR] Could not determine a valid public IP"
+    return "0.0.0.0"
+
+def getHostname():
+    if os.environ.get('MY_HOSTNAME') is not None:
+        return  os.environ.get('MY_HOSTNAME')
+    else:
+        return "SomeRandomHoneypot"
+
+def getOwnInternalIP():
+    # try MY_INTIP from env
+    try:
+        if os.environ.get('MY_INTIP') is not None:
+            if ipaddress.ip_address(unicode(os.environ.get('MY_INTIP'))).is_private:
+                return os.environ.get('MY_INTIP')
+            else:
+                print " => [ERROR] Could not determine a valid private IP"
+                return "0.0.0.0"
+    except:
+        print " => [ERROR] Could not determine a valid private IP"
+        return "0.0.0.0"
+    print " => [ERROR] Could not determine a valid private IP"
+    return "0.0.0.0"
+
+def resolveHost(host):
+    """ resolve an IP, either from IP or hostname """
+    try:
+        return ipaddress.IPv4Address(host)
+    except:
+
+        if ipaddress.IPv4Address(socket.gethostbyname(host)):
+            return socket.gethostbyname(host)
+        else:
+            return False
+
 
 if __name__ == "__main__":
     pass

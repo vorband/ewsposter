@@ -96,3 +96,18 @@ logfile = /opt/elasticpot/log/elasticpot.log
 suricata = false
 nodeid = <your unique analyzer id>
 logfile = /opt/suricata/logs/suricata_ews.log
+
+[MAILONEY]
+mailoney = false
+nodeid = <your unique analyzer id>
+logfile = /opt/mailoney/commands.log
+
+[RDPY]
+rdpy = false
+nodeid = <your unique analyzer id>
+logfile = /opt/rdpy/log/rdpy.log
+
+[VNCLOWPOT]
+vnclowpot = false
+nodeid = <your unique analyzer id>
+logfile = /opt/vnclowpot/log/vnclowpot.log
