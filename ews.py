@@ -235,21 +235,41 @@ def writeews(EWSALERT):
 
     return True
 
+def md5malware(malware_md5):
+    #create file if its not present
+    with open(ECFG["homedir"] + os.sep + "malware.md5", "a+") as malwarefile:
+        # empty file
+        if os.stat(ECFG["homedir"] + os.sep + "malware.md5").st_size == 0:
+            malwarefile.write(malware_md5+"\n")
+            malwarefile.close()
+            return True
 
-def malware(DIR,FILE,KILL):
+        if malware_md5 in open(ECFG["homedir"] + os.sep + "malware.md5", "r").read():
+            malwarefile.close
+            return False
+        else:
+            malwarefile.write(malware_md5+"\n")
+            malwarefile.close
+            return True
+
+
+def malware(DIR,FILE,KILL, md5):
     if not os.path.isdir(DIR):
-        return 1,DIR + " NOT EXISTS!"
+        return 1,DIR + " DOES NOT EXIST!"
+
+    if md5 and not md5malware(md5):
+        return 1, "Malware MD5 %s already submitted." % md5
 
     if os.path.isfile(DIR + os.sep + FILE) is True:
         if os.path.getsize(DIR + os.sep + FILE) <= 5 * 1024 * 1024:
-            malwarefile = base64.encodestring(open(DIR + os.sep + FILE).read())
+            malwarefile = base64.encodestring(open(DIR + os.sep + FILE).read()).strip()
             if KILL is True:
                 os.remove(DIR + os.sep + FILE)
-            return 0,malwarefile
+            return 0, malwarefile
         else:
             return 1,"FILE " + DIR + os.sep + FILE + " is bigger than 5 MB!"
     else:
-        return 1, "FILE " + DIR + os.sep + FILE + " NOT EXISTS!"
+        return 1, "FILE " + DIR + os.sep + FILE + " DOES NOT EXIST!"
 
 
 def hpfeedsend(esm):
@@ -405,18 +425,6 @@ def glastopfv3():
                     "url"         : urllib.quote(row["request_url"].encode('ascii', 'ignore'))
                   }
 
-        if "request_raw" in  row.keys() and len(row["request_raw"]) > 0:
-            REQUEST["raw"] = base64.encodestring(row["request_raw"].encode('ascii', 'ignore'))
-
-        if "filename" in  row.keys() and row["filename"] != None:
-           error,malwarefile = malware(HONEYPOT["malwaredir"],row["filename"],ECFG["del_malware_after_send"])
-           if error == 0:
-                REQUEST["binary"] = malwarefile
-           else:
-                logme(MODUL,"Mission Malwarefile %s" % row["filename"] ,("P1","LOG"),ECFG)
-
-        # Collect additional Data
-
         ADATA = {
                     "sqliteid"    : row ["id"],
                     "hostname": hostname,
@@ -424,6 +432,20 @@ def glastopfv3():
                     "internalIP": internalIP
 
                 }
+
+        if "request_raw" in  row.keys() and len(row["request_raw"]) > 0:
+            REQUEST["raw"] = base64.encodestring(row["request_raw"].encode('ascii', 'ignore'))
+
+        if "filename" in  row.keys() and row["filename"] != None and ECFG["send_malware"] == True:
+           error,malwarefile = malware(HONEYPOT["malwaredir"],row["filename"],ECFG["del_malware_after_send"], False)
+           if error == 0:
+                REQUEST["binary"] = malwarefile
+           else:
+                logme(MODUL,"Mission Malwarefile %s" % row["filename"] ,("P1","LOG"),ECFG)
+
+        # Collect additional Data
+
+
 
         if "request_method" in  row.keys():
            ADATA["httpmethod"] = row["request_method"]
@@ -545,9 +567,21 @@ def glastopfv2():
                     "description"  : "Webhoneypot : Glastopf v2.x",
                     "url"          : urllib.quote(row["req"])
                   }
+        # Collect additional Data
 
-        if row["filename"] != None:
-           error,malwarefile = malware(HONEYPOT["malwaredir"],row["filename"],ECFG["del_malware_after_send"])
+        ADATA = {
+            "mysqlid": str(row["id"]),
+            "host": row["host"],
+            "hostname": hostname,
+            "externalIP": externalIP,
+            "internalIP": internalIP
+        }
+
+        if row["victim"] != "None":
+            ADATA["victim"] = row["victim"]
+
+        if row["filename"] != None and ECFG["send_malware"] == True:
+           error,malwarefile = malware(HONEYPOT["malwaredir"],row["filename"],ECFG["del_malware_after_send"], False)
            if error == 0:
                 REQUEST["binary"] = malwarefile
            else:
@@ -976,18 +1010,6 @@ def dionaea():
                     "description" : "Network Honeyport Dionaea v0.1.0",
                   }
 
-        # Check for malware bin's
-
-        c.execute("SELECT download_md5_hash from downloads where connection = ?;",(str(row["connection"]),))
-        check = c.fetchone()
-
-        if check is not None:
-           error,malwarefile = malware(HONEYPOT["malwaredir"],check[0],ECFG["del_malware_after_send"])
-           if error == 0:
-               REQUEST["binary"] = malwarefile
-           else:
-               logme(MODUL,"Mission Malwarefile %s" % check[0] ,("P1","LOG"),ECFG)
-
         # Collect additional Data
 
         ADATA = {
@@ -997,6 +1019,21 @@ def dionaea():
                  "internalIP": internalIP
 
         }
+
+        # Check for malware bin's
+
+        c.execute("SELECT download_md5_hash from downloads where connection = ?;",(str(row["connection"]),))
+        check = c.fetchone()
+        if check is not None and ECFG["send_malware"] == True:
+           error,malwarefile = malware(HONEYPOT["malwaredir"],check[0],ECFG["del_malware_after_send"],check[0])
+           if error == 0:
+               REQUEST["binary"] = malwarefile
+           else:
+               logme(MODUL, "Malwarefile: %s" % malwarefile, ("P1", "LOG"), ECFG)
+           if check[0]:
+               ADATA["payload_md5"] = check[0]
+
+
 
         # generate template and send
 
@@ -1109,20 +1146,6 @@ def honeytrap():
                         "description" : "NetworkHoneypot Honeytrap v1.1"
                       }
 
-            # Search for Payload
-
-            if HONEYPOT["newversion"].lower() == "true":
-                sfile = "from_port_%s-%s_*_%s-%s-%s_md5_%s" % (re.sub("^.*:","",dest),protocol,date[0:4], date[4:6], date[6:8],md5)
-
-                for mfile in os.listdir(HONEYPOT["payloaddir"]):
-                   if fnmatch.fnmatch(mfile, sfile):
-                       error , payloadfile = malware(HONEYPOT["payloaddir"],mfile,False)
-                       if error == 0:
-                           REQUEST["raw"] = payloadfile
-                       else:
-                           logme(MODUL,"Mission Malwarefile %s" % row["filename"] ,("P1","LOG"),ECFG)
-
-
             # Collect additional Data
 
             ADATA = {
@@ -1130,6 +1153,20 @@ def honeytrap():
                 "externalIP": externalIP,
                 "internalIP": internalIP
             }
+
+            # Search for Payload
+
+            if HONEYPOT["newversion"].lower() == "true" and ECFG["send_malware"] == True:
+                sfile = "from_port_%s-%s_*_%s-%s-%s_md5_%s" % (re.sub("^.*:","",dest),protocol,date[0:4], date[4:6], date[6:8],md5)
+                for mfile in os.listdir(HONEYPOT["payloaddir"]):
+                   if fnmatch.fnmatch(mfile, sfile):
+                       error , payloadfile = malware(HONEYPOT["payloaddir"],mfile,False, md5)
+                       if error == 0:
+                           REQUEST["binary"] = payloadfile
+                       else:
+                           logme(MODUL,"Malwarefile : %s" % payloadfile ,("P1","LOG"),ECFG)
+                       if md5:
+                           ADATA["payload_md5"] = md5
 
             # generate template and send
 
