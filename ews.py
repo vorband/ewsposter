@@ -30,7 +30,7 @@ import OpenSSL.SSL
 import ipaddress
 
 name = "EWS Poster"
-version = "v1.8.9"
+version = "v1.9"
 
 
 def init():
