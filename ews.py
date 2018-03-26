@@ -373,7 +373,11 @@ def glastopfv3():
 
     # calculate send limit
 
-    c.execute("SELECT max(id) from events")
+    try:
+        c.execute("SELECT max(id) from events")
+    except:
+        logme(MODUL,"[INFO] Sqlitedb %s is corrupt or does not contain events. Skipping ! " % HONEYPOT["sqlitedb"] ,("P3","LOG"),ECFG)
+        return
 
     maxid = c.fetchone()["max(id)"]
 
