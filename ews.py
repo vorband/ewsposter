@@ -952,7 +952,12 @@ def dionaea():
 
     # calculate send limit
 
-    c.execute("SELECT max(connection) from connections;")
+    try:
+        c.execute("SELECT max(connection) from connections;")
+    except:
+        logme(MODUL, "[INFO] Sqlitedb %s is corrupt or does not contain events. Skipping ! " % HONEYPOT["sqlitedb"],
+              ("P3", "LOG"), ECFG)
+        return
 
     maxid = c.fetchone()["max(connection)"]
 
