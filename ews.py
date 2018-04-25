@@ -1667,9 +1667,8 @@ def suricata():
                 J+=1
                 pass # invalid json
             else:
-                if 'alert' in content:
+                if 'alert' in content and "src_port" in content:
                     if 'cve_id' in content['alert']:
-
                         # use t-pots external address if src_ip is rfc1819 / private
                         if (ipaddress.ip_address(content["dest_ip"]).is_private):
                             externalip=content["t-pot_ip_ext"]
@@ -1683,14 +1682,13 @@ def suricata():
                                     "timestamp" : "%s" % re.sub("T"," ",content["timestamp"][:-12]),
                                     "sadr"      : "%s" % content["src_ip"],
                                     "sipv"      : "ipv" + ip4or6(content["src_ip"]),
-                                    "sprot"     : "tcp",
+                                    "sprot"     : content["proto"].lower(),
                                     "sport"     : "%d" % content["src_port"],
                                     "tipv"      : "ipv" + ip4or6(externalip),
                                     "tadr"      : "%s" % externalip,
-                                    "tprot"     : "tcp",
+                                    "tprot"     : content["proto"].lower(),
                                     "tport"     : "%d" % content["dest_port"],
                                 }
-
                         httpextras = ""
                         if "http" in content:
                             httpextras = urllib.quote(str(content["http"]).encode('ascii', 'ignore'))
