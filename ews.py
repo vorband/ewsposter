@@ -858,6 +858,9 @@ def cowrie():
         elif key[12]==2222:
             service="SSH"
             serviceport="22"
+        elif key[12]==23:
+            service="Telnet"
+            serviceport="23"
         else:
             service="SSH"
             serviceport="22"
