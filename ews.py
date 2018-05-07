@@ -31,7 +31,7 @@ import OpenSSL.SSL
 import ipaddress
 
 name = "EWS Poster"
-version = "v1.9"
+version = "v1.9.1"
 
 
 def init():
@@ -2062,6 +2062,109 @@ def mailoney():
         logme(MODUL, "%s EWS alert records send ..." % (x + y - 2 - J), ("P2"), ECFG)
     return
 
+def heralding():
+    MODUL = "HERALDING"
+    logme(MODUL, "Starting HERALDING Modul.", ("P1"), ECFG)
+
+    # collect honeypot config dic
+
+    ITEMS = ("heralding", "nodeid", "logfile")
+    HONEYPOT = readcfg(MODUL, ITEMS, ECFG["cfgfile"])
+
+    # logfile file exists ?
+
+    if os.path.isfile(HONEYPOT["logfile"]) is False:
+        logme(MODUL, "[ERROR] Missing LogFile " + HONEYPOT["logfile"] + ". Skip !", ("P3", "LOG"), ECFG)
+
+    # count limit
+
+    imin = int(countme(MODUL, 'fileline', -1, ECFG))
+
+    if int(ECFG["sendlimit"]) > 0:
+        logme(MODUL, "Send Limit is set to : " + str(ECFG["sendlimit"]) + ". Adapting to limit!", ("P1"), ECFG)
+
+    I = 0
+    x = 0
+    y = 1
+    J = 0
+
+    esm = ewsauth(ECFG["username"], ECFG["token"])
+    jesm = ""
+
+    while True:
+
+        x, y = viewcounter(MODUL, x, y)
+
+        I += 1
+
+        if int(ECFG["sendlimit"]) > 0 and I > int(ECFG["sendlimit"]):
+            break
+
+        line = getline(HONEYPOT["logfile"], (imin + I)).rstrip()
+        currentline = imin + I
+
+        if len(line) == 0:
+            break
+        else:
+            if "timestamp" in line:
+                countme(MODUL,'fileline',-2,ECFG)
+                J+=1
+                continue
+            linecontent=line.split(",")
+
+            time = linecontent[0].split(".")[0]
+
+            # Prepare and collect Alert Data
+
+            DATA = {
+                "aid": HONEYPOT["nodeid"],
+                "timestamp": "%s" % (time),
+                "sadr": linecontent[3],
+                "sipv": "ipv" + ip4or6(linecontent[3]),
+                "sprot": "tcp",
+                "sport": linecontent[4],
+                "tipv": "ipv" + ip4or6(linecontent[5]),
+                "tadr": linecontent[5],
+                "tprot": "tcp",
+                "tport": linecontent[6],
+            }
+
+            REQUEST = {
+                "description": "Heralding Honeypot"
+            }
+
+            # Collect additional Data
+
+            ADATA = {
+                "protocol": linecontent[7],
+                "username": linecontent[8],
+                "password": linecontent[9],
+                "hostname": hostname,
+                "externalIP": externalIP,
+                "internalIP": internalIP
+            }
+
+            # generate template and send
+
+            esm = buildews(esm, DATA, REQUEST, ADATA)
+            jesm = buildjson(jesm, DATA, REQUEST, ADATA)
+
+            countme(MODUL, 'fileline', -2, ECFG)
+            countme(MODUL, 'daycounter', -2, ECFG)
+
+            if ECFG["a.verbose"] is True:
+                verbosemode(MODUL, DATA, REQUEST, ADATA)
+
+    # Cleaning linecache
+    clearcache()
+    if int(esm.xpath('count(//Alert)')) > 0:
+        sendews(esm)
+
+    writejson(jesm)
+
+    if y > 1:
+        logme(MODUL, "%s EWS alert records send ..." % (x + y - 2 - J), ("P2"), ECFG)
+    return
 
 
 ###############################################################################
@@ -2091,7 +2194,7 @@ if __name__ == "__main__":
             sender()
 
 
-        for i in ("glastopfv3", "glastopfv2", "kippo", "dionaea", "honeytrap", "rdpdetect", "emobility", "conpot", "cowrie","elasticpot", "suricata", "rdpy", "mailoney", "vnclowpot"):
+        for i in ("glastopfv3", "glastopfv2", "kippo", "dionaea", "honeytrap", "rdpdetect", "emobility", "conpot", "cowrie","elasticpot", "suricata", "rdpy", "mailoney", "vnclowpot", "heralding"):
 
             if ECFG["a.modul"]:
                 if ECFG["a.modul"] == i:

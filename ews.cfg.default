@@ -111,3 +111,8 @@ logfile = /opt/rdpy/log/rdpy.log
 vnclowpot = false
 nodeid = <your unique analyzer id>
 logfile = /opt/vnclowpot/log/vnclowpot.log
+
+[HERALDING]
+heralding = false
+nodeid = <your unique analyzer id>
+logfile = /opt/heralding/log/auth.csv
