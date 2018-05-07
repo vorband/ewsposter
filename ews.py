@@ -11,6 +11,7 @@ from linecache import getline, clearcache
 from datetime import datetime
 from lxml import etree
 from copy import deepcopy
+import glob
 
 from moduls.exml import ewsauth, ewsalert
 from moduls.einit import locksocket, ecfg, daycounterreset
@@ -1406,101 +1407,112 @@ def conpot():
     ITEMS  = ("conpot","nodeid","logfile")
     HONEYPOT = readcfg(MODUL,ITEMS,ECFG["cfgfile"])
 
-    # logfile file exists ?
+    # if multiple logfiles:
+    conpotlog=glob.glob(HONEYPOT["logfile"])
+    if len(conpotlog) < 1:
+        logme(MODUL, "[ERROR] Missing of incorrect LogFile for conpot. Skip !", ("P3", "LOG"), ECFG)
 
-    if os.path.isfile(HONEYPOT["logfile"]) is False:
-        logme(MODUL,"[ERROR] Missing LogFile " + HONEYPOT["logfile"] + ". Skip !",("P3","LOG"),ECFG)
+    index=0
+    orgModul = MODUL
 
-    # count limit
+    for logfile in conpotlog:
+        index+=1
+        if len(conpotlog) > 1:
+            MODUL=orgModul + "-" + str(index)
 
-    imin = int(countme(MODUL,'fileline',-1,ECFG))
+        # logfile file exists ? should not be triggered when using glob.glob.
+        if os.path.isfile(logfile) is False:
+            logme(MODUL,"[ERROR] Missing LogFile " + logfile + ". Skip !",("P3","LOG"),ECFG)
 
-    if int(ECFG["sendlimit"]) > 0:
-        logme(MODUL,"Send Limit is set to : " + str(ECFG["sendlimit"]) + ". Adapting to limit!",("P1"),ECFG)
+        # count limit
+        imin = int(countme(MODUL,'fileline',-1,ECFG))
 
-    I = 0 ; x = 0 ; y = 1 ; J = 0
+        if int(ECFG["sendlimit"]) > 0:
+            logme(MODUL,"Send Limit is set to : " + str(ECFG["sendlimit"]) + ". Adapting to limit!",("P1"),ECFG)
 
-    esm = ewsauth(ECFG["username"],ECFG["token"])
-    jesm = ""
+        I = 0 ; x = 0 ; y = 1 ; J = 0
 
-    while True:
-    
-        x,y = viewcounter(MODUL,x,y)
+        esm = ewsauth(ECFG["username"],ECFG["token"])
+        jesm = ""
 
-        I += 1
+        while True:
 
-        if int(ECFG["sendlimit"]) > 0 and I > int(ECFG["sendlimit"]):
-            break
+            x,y = viewcounter(MODUL,x,y)
 
-        line = getline(HONEYPOT["logfile"],(imin + I)).rstrip()
-        currentline=imin+I 
+            I += 1
 
-        if len(line) == 0:
-            break
-        else:
-            # parse json
-            try:
-                content = json.loads(line)
-            except ValueError, e:
-                logme(MODUL,"Invalid json entry found in line "+str(currentline)+", skipping entry.",("P3"),ECFG)
-                countme(MODUL,'fileline',-2,ECFG)
-                J+=1
-                pass # invalid json
+            if int(ECFG["sendlimit"]) > 0 and I > int(ECFG["sendlimit"]):
+                break
+
+            line = getline(logfile,(imin + I)).rstrip()
+            currentline=imin+I
+
+            if len(line) == 0:
+                break
             else:
-                DATA =    {
-                            "aid"       : HONEYPOT["nodeid"],
-                            "timestamp" : "%s-%s-%s %s" % (content['timestamp'][0:4], content['timestamp'][5:7], content['timestamp'][8:10], content['timestamp'][11:19]),
-                            "sadr"      : "%s" % content['src_ip'],
-                            "sipv"      : "ipv4",
-                            "sprot"     : "tcp",
-                            "sport"     : "%d" % content['src_port'],
-                            "tipv"      : "ipv4",
-                            "tadr"      : "%s" % content['dst_ip'],
-                            "tprot"     : "tcp",
-                            "tport"     : "undefined",
-                        }
+                # parse json
+                try:
+                    content = json.loads(line)
+                except ValueError, e:
+                    logme(MODUL,"Invalid json entry found in line "+str(currentline)+", skipping entry.",("P3"),ECFG)
+                    countme(MODUL,'fileline',-2,ECFG)
+                    J+=1
+                    pass # invalid json
+                else:
+                    DATA =    {
+                                "aid"       : HONEYPOT["nodeid"],
+                                "timestamp" : "%s-%s-%s %s" % (content['timestamp'][0:4], content['timestamp'][5:7], content['timestamp'][8:10], content['timestamp'][11:19]),
+                                "sadr"      : "%s" % content['src_ip'],
+                                "sipv"      : "ipv4",
+                                "sprot"     : "tcp",
+                                "sport"     : "%d" % content['src_port'],
+                                "tipv"      : "ipv4",
+                                "tadr"      : "%s" % content['dst_ip'],
+                                "tprot"     : "tcp",
+                                "tport"     : "undefined",
+                            }
 
-                REQUEST = {
-                            "description" : "Conpot Honeypot",
-                        }
+                    REQUEST = {
+                                "description" : "Conpot Honeypot",
+                            }
 
 
-                # Collect additional Data
+                    # Collect additional Data
 
-                ADATA =   {
-                            "conpot_event_type"    :   "%s" % content['event_type'],
-                            "conpot_data_type"     :   "%s" % content['data_type'],
-                            "conpot_sensor_id"     :   "%s" % content['sensorid'],
-                            "conpot_request"       :   "%s" % content['request'],
-                            "conpot_id"            :   "%s" % content['id'],
-                            "conpot_response"      :   "%s" % content['response'],
-                            "hostname": hostname,
-                            "externalIP": externalIP,
-                            "internalIP": internalIP
+                    ADATA =   {
+                                "conpot_event_type"    :   "%s" % content['event_type'],
+                                "conpot_data_type"     :   "%s" % content['data_type'],
+                                "conpot_sensor_id"     :   "%s" % content['sensorid'],
+                                "conpot_request"       :   "%s" % content['request'],
+                                "conpot_id"            :   "%s" % content['id'],
+                                "conpot_response"      :   "%s" % content['response'],
+                                "hostname": hostname,
+                                "externalIP": externalIP,
+                                "internalIP": internalIP
 
-                        }
+                            }
 
-                # generate template and send
+                    # generate template and send
 
-                esm = buildews(esm,DATA,REQUEST,ADATA)
-                jesm = buildjson(jesm,DATA,REQUEST,ADATA)
+                    esm = buildews(esm,DATA,REQUEST,ADATA)
+                    jesm = buildjson(jesm,DATA,REQUEST,ADATA)
 
-                countme(MODUL,'fileline',-2,ECFG)
-                countme(MODUL,'daycounter', -2,ECFG)
+                    countme(MODUL,'fileline',-2,ECFG)
+                    countme(MODUL,'daycounter', -2,ECFG)
 
-                if ECFG["a.verbose"] is True:
-                    verbosemode(MODUL,DATA,REQUEST,ADATA)
+                    if ECFG["a.verbose"] is True:
+                        verbosemode(MODUL,DATA,REQUEST,ADATA)
 
-    # Cleaning linecache
-    clearcache()
+        # Cleaning linecache
+        clearcache()
 
-    if int(esm.xpath('count(//Alert)')) > 0:
-        sendews(esm)
+        if int(esm.xpath('count(//Alert)')) > 0:
+            sendews(esm)
 
-    writejson(jesm)
+        writejson(jesm)
 
-    if y  > 1:
-        logme(MODUL,"%s EWS alert records send ..." % (x+y-2-J),("P2"),ECFG)
+        if y  > 1:
+            logme(MODUL,"%s EWS alert records send ..." % (x+y-2-J),("P2"),ECFG)
     return
 
 def elasticpot():
