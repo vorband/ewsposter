@@ -66,7 +66,7 @@ def readcfg(MODULE,ITEMS,FILE):
 
     RC = {}
 
-    config = ConfigParser.ConfigParser()
+    config = ConfigParser.SafeConfigParser(os.environ)
     config.read(FILE)
 
     for items in ITEMS:
