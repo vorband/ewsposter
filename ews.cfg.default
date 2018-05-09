@@ -116,3 +116,8 @@ logfile = /opt/vnclowpot/log/vnclowpot.log
 heralding = false
 nodeid = <your unique analyzer id>
 logfile = /opt/heralding/log/auth.csv
+
+[CISCOASA]
+ciscoasa = true
+nodeid = <your unique analyzer id>
+logfile = /opt/ciscoasa/log/ciscoasa.log
