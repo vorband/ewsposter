@@ -118,6 +118,13 @@ nodeid = <your unique analyzer id>
 logfile = /opt/heralding/log/auth.csv
 
 [CISCOASA]
-ciscoasa = true
+ciscoasa = false
 nodeid = <your unique analyzer id>
 logfile = /opt/ciscoasa/log/ciscoasa.log
+
+[TANNER]
+tanner = false
+nodeid = <your unique analyzer id>
+logfile = /opt/tanner/log/tanner.log
+
+
