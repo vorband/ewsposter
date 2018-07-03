@@ -1910,8 +1910,6 @@ def vnclowpot():
             sourceip = line.split(" ")[2].split(":")[0]
             sport = line.split(" ")[2].split(":")[1]
 
-            print("date: " + date + " time: " + time + "source ip: " + sourceip)
-
             # Prepare and collect Alert Data
 
             DATA = {
