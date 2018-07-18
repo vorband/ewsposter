@@ -2215,7 +2215,13 @@ def ciscoasa():
                 J+=1
                 continue
 
-            linecontent=ast.literal_eval(line)
+            try:
+                linecontent=ast.literal_eval(line)
+            except:
+                countme(MODUL, 'fileline', -2, ECFG)
+                J += 1
+                continue
+
             if not 'src_port' in linecontent:
                 countme(MODUL, 'fileline', -2, ECFG)
                 J += 1
