@@ -2004,11 +2004,16 @@ def mailoney():
         if len(line) == 0:
             break
         else:
-            if not any(s in line.split(" ")[1] for s in trigger):
-                countme(MODUL,'fileline',-2,ECFG)
-                J+=1
+            try:
+                if not any(s in line.split(" ")[1] for s in trigger):
+                    countme(MODUL,'fileline',-2,ECFG)
+                    J+=1
+                    continue
+            except:
+                countme(MODUL, 'fileline', -2, ECFG)
+                J += 1
                 continue
-
+                
             time = datetime.utcfromtimestamp(float(line.split("][")[0].split(".")[0][1:]))
             sourceip = line.split("][")[1].split(":")[0]
             sport= line.split("][")[1].split(":")[1].split("]")[0]
