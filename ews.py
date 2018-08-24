@@ -749,6 +749,10 @@ def cowrie():
     MODUL  = "COWRIE"
     logme(MODUL,"Starting Cowrie Modul.",("P1"),ECFG)
 
+    # session related variables
+    lastSubmittedLine, firstOpenedWithoutClose = 0 , 0
+
+
     # collect honeypot config dic
 
     ITEMS  = ("cowrie","nodeid","logfile")
@@ -766,7 +770,8 @@ def cowrie():
     
     # count limit
 
-    imin = int(countme(MODUL,'fileline',-1,ECFG))
+ #   imin = int(countme(MODUL,'firstOpenedWithoutClose',-1,ECFG))
+    imin = int(countme(MODUL, 'fileline', -1, ECFG))
 
     if int(ECFG["sendlimit"]) > 0:
         logme(MODUL,"Send Limit is set to : " + str(ECFG["sendlimit"]) + ". Adapting to limit!",("P1"),ECFG)
@@ -840,7 +845,6 @@ def cowrie():
                     for n,i in enumerate(sessionstosend):
                         if (i[5]==content["session"]):
                             i[14]=i[14] + "\n" +content["input"]
-                        
 
                 # store session close
                 if (content['eventid'] == "cowrie.session.closed"):
@@ -848,7 +852,6 @@ def cowrie():
                         if (i[5]==content["session"]):
                             i[7]=content["timestamp"]
 
-                            
     # loop through list of sessions to send
     for key in sessionstosend:
         
@@ -913,6 +916,9 @@ def cowrie():
 
         countme(MODUL,'fileline',key[0],ECFG)
         countme(MODUL,'daycounter', -2,ECFG)
+
+        countme(MODUL,'firstOpenedWithoutClose', firstOpenedWithoutClose ,ECFG)
+        countme(MODUL,'lastSubmittedLine', lastSubmittedLine ,ECFG)
 
         if ECFG["a.verbose"] is True:
             verbosemode(MODUL,DATA,REQUEST,ADATA)
@@ -2363,13 +2369,14 @@ def tanner():
                 httpversion="HTTP/1.1"
             else:
                 httpversion="HTTP/1.0"
-
             if len(linecontent['headers']) > 0:
                 reassembledReq=linecontent['method'] + " "  + linecontent['path'] +" "+ httpversion + "\r\n"
                 for i in linecontent['headers']:
-                    reassembledReq += str(i.title())+ ": " + str(linecontent['headers'][i]) + "\r\n"
+                    headercontent = ""
+                    if linecontent['headers'][i]:
+                        headercontent=linecontent['headers'][i].encode("utf-8")
+                    reassembledReq += str(i.title())+ ": " + unicode(headercontent, "utf-8") + "\r\n"
             REQUEST["raw"] = base64.encodestring(reassembledReq.encode('ascii', 'ignore'))
-
             # generate template and send
 
             esm = buildews(esm, DATA, REQUEST, ADATA)
