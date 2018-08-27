@@ -33,7 +33,7 @@ import ipaddress
 from collections import OrderedDict
 
 name = "EWS Poster"
-version = "v1.9.2"
+version = "v1.9.3"
 
 
 def init():
@@ -750,8 +750,7 @@ def cowrie():
     logme(MODUL,"Starting Cowrie Modul.",("P1"),ECFG)
 
     # session related variables
-    lastSubmittedLine, firstOpenedWithoutClose = 0 , 0
-
+    lastSubmittedLine, firstOpenedWithoutClose = 0, 0
 
     # collect honeypot config dic
 
@@ -770,8 +769,11 @@ def cowrie():
     
     # count limit
 
- #   imin = int(countme(MODUL,'firstOpenedWithoutClose',-1,ECFG))
-    imin = int(countme(MODUL, 'fileline', -1, ECFG))
+    imin = int(countme(MODUL,'firstopenedwithoutclose',-1,ECFG))
+    if imin>0:
+        imin=imin-1
+    firstOpenedWithoutClose = imin
+    lastSubmittedLine=int(countme(MODUL,'lastsubmittedline',-1,ECFG))
 
     if int(ECFG["sendlimit"]) > 0:
         logme(MODUL,"Send Limit is set to : " + str(ECFG["sendlimit"]) + ". Adapting to limit!",("P1"),ECFG)
@@ -782,14 +784,15 @@ def cowrie():
     jesm = ""
     
     # dict to gather session information
-    cowriesessions={}
+    cowriesessions=OrderedDict()
     sessionstosend=[]
 
     while True:
-
+        if int(ECFG["sendlimit"]) > 0 and J >= int(ECFG["sendlimit"]):
+            break
         I += 1
 
-        line = getline(HONEYPOT["logfile"],(imin + I)).rstrip()
+        line = getline(HONEYPOT["logfile"],(imin +I)).rstrip()
         currentline=imin + I
 
         if len(line) == 0:
@@ -800,13 +803,14 @@ def cowrie():
                 content = json.loads(line)
             except ValueError, e:
                 logme(MODUL,"Invalid json entry found in line "+str(currentline)+", skipping entry.",("P3"),ECFG)
+                countme(MODUL,'fileline',-2,ECFG)
                 pass # invalid json
             else:
-                # if new session is started, store session-related info 
+                # if new session is started, store session-related info
                 if (content['eventid'] == "cowrie.session.connect"):
                     # create empty session content: structure will be the same as kippo, add dst port and commands
-                    # | id  | username | password | success | logintimestamp | session | sessionstarttime| sessionendtime | ip | cowrieip | version| src_port|dst_port|dst_ip|commands
-                    cowriesessions[content["session"]]=[currentline,'','','','',content["session"],content["timestamp"],'',content["src_ip"],content["sensor"],'',content["src_port"],content["dst_port"],content["dst_ip"],"" ]
+                    # | id  | username | password | success | logintimestamp | session | sessionstarttime| sessionendtime | ip | cowrieip | version| src_port|dst_port|dst_ip|commands |tosend
+                    cowriesessions[content["session"]]=[currentline,'','','','',content["session"],content["timestamp"],'',content["src_ip"],content["sensor"],'',content["src_port"],content["dst_port"],content["dst_ip"],"", False]
 
                 # store correponding ssh client version
                 if (content['eventid'] == "cowrie.client.version"):
@@ -815,42 +819,54 @@ def cowrie():
                 
                 # create successful login 
                 if (content['eventid'] == "cowrie.login.success"):
-                    if int(ECFG["sendlimit"]) > 0 and J >= int(ECFG["sendlimit"]):
-                         break
                     if content["session"] in cowriesessions:
                         cowriesessions[content["session"]][0]=currentline
                         cowriesessions[content["session"]][3]="Success"
                         cowriesessions[content["session"]][1]=content["username"]
                         cowriesessions[content["session"]][2]=content["password"]
                         cowriesessions[content["session"]][4]=content["timestamp"]
-                        sessionstosend.append(deepcopy(cowriesessions[content["session"]]))
-                        J+=1
+                        cowriesessions[content["session"]][15]=True
 
                 # create failed login
-                elif (content['eventid'] == "cowrie.login.failed"):
-                    if int(ECFG["sendlimit"]) > 0 and J >= int(ECFG["sendlimit"]):
-                        break
+                if (content['eventid'] == "cowrie.login.failed"):
                     if content["session"] in cowriesessions:
                         cowriesessions[content["session"]][0]=currentline
                         cowriesessions[content["session"]][3]="Fail"
                         cowriesessions[content["session"]][1]=content["username"]
                         cowriesessions[content["session"]][2]=content["password"]
                         cowriesessions[content["session"]][4]=content["timestamp"]
-                        sessionstosend.append(deepcopy(cowriesessions[content["session"]]))
-                        J+=1
-
+                        if currentline > lastSubmittedLine:
+                            sessionstosend.append(deepcopy(cowriesessions[content["session"]]))
+                            lastSubmittedLine = currentline
+                            J+=1
 
                 # store terminal input / commands 
                 if (content['eventid'] == "cowrie.command.input"):
-                    for n,i in enumerate(sessionstosend):
-                        if (i[5]==content["session"]):
-                            i[14]=i[14] + "\n" +content["input"]
+                    if content["session"] in cowriesessions:
+                        cowriesessions[content["session"]][14]=cowriesessions[content["session"]][14] + "\n" +content["input"]
+                        cowriesessions[content["session"]][15]=True
 
                 # store session close
                 if (content['eventid'] == "cowrie.session.closed"):
-                    for n,i in enumerate(sessionstosend):
-                        if (i[5]==content["session"]):
-                            i[7]=content["timestamp"]
+                   # print len(cowriesessions[content["session"]][14])
+                    if content["session"] in cowriesessions:
+                        if (cowriesessions[content["session"]][5]==content["session"]):
+                            cowriesessions[content["session"]][7]=content["timestamp"]
+                            if currentline > lastSubmittedLine:
+                                if cowriesessions[content["session"]][15]==True:
+                                    sessionstosend.append(deepcopy(cowriesessions[content["session"]]))
+                                    lastSubmittedLine = currentline
+                                    J+= 1
+                                cowriesessions.pop(content["session"])
+
+                # update firstOpenedWithoutClose
+                if len(cowriesessions) is not 0:
+                    if cowriesessions.values()[0][3] == "Fail":
+                        pass
+                    else:
+                        firstOpenedWithoutClose = cowriesessions.values()[0][0]
+
+
 
     # loop through list of sessions to send
     for key in sessionstosend:
@@ -914,11 +930,10 @@ def cowrie():
         esm = buildews(esm,DATA,REQUEST,ADATA)
         jesm = buildjson(jesm,DATA,REQUEST,ADATA)
 
-        countme(MODUL,'fileline',key[0],ECFG)
         countme(MODUL,'daycounter', -2,ECFG)
 
-        countme(MODUL,'firstOpenedWithoutClose', firstOpenedWithoutClose ,ECFG)
-        countme(MODUL,'lastSubmittedLine', lastSubmittedLine ,ECFG)
+        countme(MODUL,'firstopenedwithoutclose', firstOpenedWithoutClose,ECFG)
+        countme(MODUL,'lastsubmittedline', lastSubmittedLine,ECFG)
 
         if ECFG["a.verbose"] is True:
             verbosemode(MODUL,DATA,REQUEST,ADATA)
