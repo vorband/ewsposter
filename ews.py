@@ -786,7 +786,6 @@ def cowrie():
     # dict to gather session information
     cowriesessions=OrderedDict()
     sessionstosend=[]
-
     while True:
         if int(ECFG["sendlimit"]) > 0 and J >= int(ECFG["sendlimit"]):
             break
@@ -803,13 +802,12 @@ def cowrie():
                 content = json.loads(line)
             except ValueError, e:
                 logme(MODUL,"Invalid json entry found in line "+str(currentline)+", skipping entry.",("P3"),ECFG)
-                countme(MODUL,'fileline',-2,ECFG)
                 pass # invalid json
             else:
                 # if new session is started, store session-related info
                 if (content['eventid'] == "cowrie.session.connect"):
                     # create empty session content: structure will be the same as kippo, add dst port and commands
-                    # | id  | username | password | success | logintimestamp | session | sessionstarttime| sessionendtime | ip | cowrieip | version| src_port|dst_port|dst_ip|commands |tosend
+                    # | id  | username | password | success | logintimestamp | session | sessionstarttime| sessionendtime | ip | cowrieip | version| src_port|dst_port|dst_ip|commands | successful login
                     cowriesessions[content["session"]]=[currentline,'','','','',content["session"],content["timestamp"],'',content["src_ip"],content["sensor"],'',content["src_port"],content["dst_port"],content["dst_ip"],"", False]
 
                 # store correponding ssh client version
@@ -820,7 +818,6 @@ def cowrie():
                 # create successful login 
                 if (content['eventid'] == "cowrie.login.success"):
                     if content["session"] in cowriesessions:
-                        cowriesessions[content["session"]][0]=currentline
                         cowriesessions[content["session"]][3]="Success"
                         cowriesessions[content["session"]][1]=content["username"]
                         cowriesessions[content["session"]][2]=content["password"]
@@ -830,7 +827,6 @@ def cowrie():
                 # create failed login
                 if (content['eventid'] == "cowrie.login.failed"):
                     if content["session"] in cowriesessions:
-                        cowriesessions[content["session"]][0]=currentline
                         cowriesessions[content["session"]][3]="Fail"
                         cowriesessions[content["session"]][1]=content["username"]
                         cowriesessions[content["session"]][2]=content["password"]
@@ -848,7 +844,6 @@ def cowrie():
 
                 # store session close
                 if (content['eventid'] == "cowrie.session.closed"):
-                   # print len(cowriesessions[content["session"]][14])
                     if content["session"] in cowriesessions:
                         if (cowriesessions[content["session"]][5]==content["session"]):
                             cowriesessions[content["session"]][7]=content["timestamp"]
