@@ -809,6 +809,7 @@ def cowrie():
                     # create empty session content: structure will be the same as kippo, add dst port and commands
                     # | id  | username | password | success | logintimestamp | session | sessionstarttime| sessionendtime | ip | cowrieip | version| src_port|dst_port|dst_ip|commands | successful login
                     cowriesessions[content["session"]]=[currentline,'','','','',content["session"],content["timestamp"],'',content["src_ip"],content["sensor"],'',content["src_port"],content["dst_port"],content["dst_ip"],"", False]
+                    firstOpenedWithoutClose = cowriesessions.values()[0][0]
 
                 # store correponding ssh client version
                 if (content['eventid'] == "cowrie.client.version"):
@@ -836,7 +837,7 @@ def cowrie():
                             lastSubmittedLine = currentline
                             J+=1
 
-                # store terminal input / commands 
+                # store terminal input / commands
                 if (content['eventid'] == "cowrie.command.input"):
                     if content["session"] in cowriesessions:
                         cowriesessions[content["session"]][14]=cowriesessions[content["session"]][14] + "\n" +content["input"]
@@ -853,16 +854,9 @@ def cowrie():
                                     lastSubmittedLine = currentline
                                     J+= 1
                                 cowriesessions.pop(content["session"])
-
-                # update firstOpenedWithoutClose
-                if len(cowriesessions) is not 0:
-                    if cowriesessions.values()[0][3] == "Fail":
-                        pass
-                    else:
-                        firstOpenedWithoutClose = cowriesessions.values()[0][0]
-
-
-
+                                if len(cowriesessions) == 0:
+                                    firstOpenedWithoutClose = currentline
+                              
     # loop through list of sessions to send
     for key in sessionstosend:
         
