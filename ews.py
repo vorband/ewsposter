@@ -123,7 +123,7 @@ def viewcounter(MODUL,x,y):
     if y  == 100:
         x += 100
         # Inform every 100 send records
-        logme(MODUL,str(x) +" EWS alert records sent ...",("P2"),ECFG)
+        logme(MODUL,str(x) +" log entries processed ...",("P2"),ECFG)
         y = 1
     else:
         y += 1
@@ -2449,13 +2449,15 @@ def glutton():
         else:
             linecontent=json.loads(line, object_pairs_hook=OrderedDict)
             dtime = (datetime.fromtimestamp(float(linecontent['ts']))).strftime('%Y-%m-%d %H:%M:%S')
-            print I
+
             # skip non attack info
             if "src_ip" not in linecontent:
                 countme(MODUL,'fileline',-2,ECFG)
+                J += 1
                 continue
             if "error" in linecontent["level"]:
                 countme(MODUL,'fileline',-2,ECFG)
+                J += 1
                 continue
 
 
