@@ -41,7 +41,7 @@ def init():
     global externalIP
     global internalIP
     hostname = getHostname()
-    externalIP=getOwnExternalIP(readonecfg(MODUL,"ip", ECFG["cfgfile"]))
+    externalIP=ECFG["ip"]
     internalIP=getOwnInternalIP()
 
 def ewswebservice(ems):

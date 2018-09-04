@@ -99,40 +99,62 @@ def readonecfg(MODULE,item,FILE):
 def checkForPublicIP(ip):
     return ipaddress.ip_address(ip).is_global
 
-def getOwnExternalIP(storedip):
-    # try MY_EXTIP from env
+def getOwnExternalIP(ECFG):
+    #  try from env variable
     try:
         if os.environ.get('MY_EXTIP') is not None:
             if ipaddress.ip_address(unicode(os.environ.get('MY_EXTIP'))).is_global:
                 return os.environ.get('MY_EXTIP')
-    except:
-        # try the IP from ews.cfg
-        try:
-            if ipaddress.ip_address(unicode(storedip)).is_global:
-                return storedip
-            # try to resolve IP from external service
             else:
-                try:
-                    extip = get('https://api.ipify.org', timeout=5).text
-                    if ipaddress.ip_address(unicode(extip)).is_global:
-                        return extip
-                    return storedip
-                except:
-                    print " => [ERROR] Could not determine a valid public IP"
-                    return storedip
-        except ValueError:
+                logme("Main","[ERROR] Environment variable MY_EXTIP is not a public IP", ("P1","Log"), ECFG)
+                pass
+        else:
+            logme("Main", "[INFO] Environment variable MY_EXTIP not set", ("P1","Log"), ECFG)
+    except:
+        logme("Main", "[ERROR] Environment variable MY_EXTIP contains no IP address", ("P1","Log"), ECFG)
+
+    # try ews.ip file
+    ewsip = ECFG["path2"] + os.sep + "ews.ip"
+
+    if os.path.isfile(ewsip):
+        pubipfile = readonecfg("MAIN", "ip", ewsip)
+        if pubipfile.lower() == "null" or pubipfile.lower() == "false" or pubipfile.lower() == "unknown":
+            logme("Main", "[ERROR] ews.ip contained no ip section or empty value for ip. ", ("P1","Log"), ECFG)
+            pass
+        else:
             try:
-                extip = get('https://api.ipify.org', timeout=5).text
-                if ipaddress.ip_address(unicode(extip)).is_global:
-                    return extip
+                if ipaddress.ip_address(unicode(pubipfile)).is_global:
+                    return pubipfile
                 else:
-                    print " => [ERROR] Could not determine a valid public IP"
-                    return "0.0.0.0"
+                    logme("Main", "[ERROR] IP address in ews.ip is not a public IP", ("P1","Log"), ECFG)
+                    pass
             except:
-                print " => [ERROR] Could not determine a valid public IP"
-                return "0.0.0.0"
-    print " => [ERROR] Could not determine a valid public IP"
-    return "0.0.0.0"
+                logme("Main", "[ERROR] ews.ip contains no IP address", ("P1","Log"), ECFG)
+
+    # try the IP from ews.cfg
+    configip = readonecfg("MAIN","ip", ECFG["cfgfile"])
+    try:
+        if ipaddress.ip_address(unicode(configip)).is_global:
+            return configip
+        else:
+            logme("Main", "[ERROR] IP address in ews.cfg is not a public IP", ("P1","Log"), ECFG)
+            pass
+    except:
+        logme("Main", "[ERROR]] ews.cfg contains no IP address", ("P1","Log"), ECFG)
+
+
+    # try from public service
+    try:
+        extip = get('https://api.ipify.org', timeout=5).text
+        if ipaddress.ip_address(unicode(extip)).is_global:
+            return extip
+        else:
+            logme("Main","[ERROR] IP address returned from external service is not a public IP, this should never happen...", ("P1","Log"), ECFG)
+            pass
+    except:
+        logme("Main", "[ERROR] Could not determine a valid public IP using external service", ("P1","Log"), ECFG)
+
+    return False
 
 def getHostname():
     if os.environ.get('MY_HOSTNAME') is not None:

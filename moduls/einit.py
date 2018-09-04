@@ -6,7 +6,7 @@ import argparse
 import os
 import sys
 from moduls.elog import logme
-from moduls.etoolbox import readcfg, readonecfg
+from moduls.etoolbox import readcfg, readonecfg, getOwnExternalIP
 
 def ecfg(name,version):
     MODUL = "EINIT"
@@ -147,17 +147,13 @@ def ecfg(name,version):
 
     # IP Handling
 
-    ewsip = ECFG["path2"] + os.sep + "ews.ip"
+    # try to determine the external IP
+    MCFG["ip"]=getOwnExternalIP(ECFG)
 
-    MCFG["ip"] = readonecfg("MAIN","ip", ECFG["cfgfile"])
+    if not MCFG["ip"]:
+        logme(MODUL,"External IP address cannot be determined. Set external IP in ews.cfg, ews.ip or env variable MY_EXTIP or allow external api request.. Abort !",("P1","EXIT"),ECFG)
 
-    if os.path.isfile(ewsip) is True:
-        MCFG["ip"] = readonecfg("MAIN","ip", ewsip)
-        if MCFG["ip"].lower() == "null":
-             logme(MODUL,"Error IP Address in File " + ewsip + " not set. Abort !",("P1","EXIT"),ECFG)
-
-    if MCFG["ip"].lower() == "null" or MCFG["ip"].lower() == "false":
-        logme(MODUL,"Error IP Address in ews.cfg not set or null. Abort !",("P1","EXIT"),ECFG)
+    logme(MODUL, "Using external IP address " + str(MCFG["ip"]), ("P1", "Log"), ECFG)
 
     # sendlimit expect
 
@@ -278,7 +274,7 @@ def locksocket(name):
 
     lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
     # debug dev macos
-    # return True
+    #return True
     # end debug dev macos
     try:
         lock_socket.bind('\0' + name)
