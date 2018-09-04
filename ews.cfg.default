@@ -127,4 +127,7 @@ tanner = false
 nodeid = <your unique analyzer id>
 logfile = /opt/tanner/log/tanner.log
 
-
+[GLUTTON]
+glutton = false
+nodeid = <your unique analyzer id>
+logfile = /opt/glutton/log/tanner.log

@@ -33,7 +33,7 @@ import ipaddress
 from collections import OrderedDict
 
 name = "EWS Poster"
-version = "v1.9.3"
+version = "v1.9.4"
 
 
 def init():
@@ -2403,6 +2403,120 @@ def tanner():
         logme(MODUL, "%s EWS alert records send ..." % (x + y - 2 - J), ("P2"), ECFG)
     return
 
+def glutton():
+    MODUL = "GLUTTON"
+    logme(MODUL, "Starting Glutton Modul.", ("P1"), ECFG)
+
+    # collect honeypot config dic
+
+    ITEMS = ("glutton", "nodeid", "logfile")
+    HONEYPOT = readcfg(MODUL, ITEMS, ECFG["cfgfile"])
+
+    # logfile file exists ?
+
+    if os.path.isfile(HONEYPOT["logfile"]) is False:
+        logme(MODUL, "[ERROR] Missing LogFile " + HONEYPOT["logfile"] + ". Skip !", ("P3", "LOG"), ECFG)
+
+    # count limit
+
+    imin = int(countme(MODUL, 'fileline', -1, ECFG))
+
+    if int(ECFG["sendlimit"]) > 0:
+        logme(MODUL, "Send Limit is set to : " + str(ECFG["sendlimit"]) + ". Adapting to limit!", ("P1"), ECFG)
+
+    I = 0
+    x = 0
+    y = 1
+    J = 0
+
+    esm = ewsauth(ECFG["username"], ECFG["token"])
+    jesm = ""
+
+    while True:
+
+        x, y = viewcounter(MODUL, x, y)
+
+        I += 1
+
+        if int(ECFG["sendlimit"]) > 0 and I > int(ECFG["sendlimit"]):
+            break
+
+        line = getline(HONEYPOT["logfile"], (imin + I)).rstrip()
+        currentline = imin + I
+
+        if len(line) == 0:
+            break
+        else:
+            linecontent=json.loads(line, object_pairs_hook=OrderedDict)
+            dtime = (datetime.fromtimestamp(float(linecontent['ts']))).strftime('%Y-%m-%d %H:%M:%S')
+            print I
+            # skip non attack info
+            if "src_ip" not in linecontent:
+                countme(MODUL,'fileline',-2,ECFG)
+                continue
+            if "error" in linecontent["level"]:
+                countme(MODUL,'fileline',-2,ECFG)
+                continue
+
+
+            # Prepare and collect Alert Data
+            DATA = {
+                "aid": HONEYPOT["nodeid"],
+                "timestamp": "%s" % (dtime),
+                "sadr": linecontent['src_ip'],
+                "sipv": "ipv" + ip4or6(str(linecontent['src_ip'])),
+                "sprot": "tcp",
+                "sport": str(linecontent['src_port']),
+                "tipv": "ipv" + ip4or6(externalIP),
+                "tadr": externalIP,
+                "tprot": "tcp",
+                "tport": str(linecontent['dest_port']),
+            }
+            REQUEST = {
+                "description": "Glutton Honeypot",
+
+            }
+
+            # Collect additional Data
+
+            ADATA = {
+                "hostname": hostname,
+                "externalIP": externalIP,
+                "internalIP": internalIP
+            }
+
+            if "payload_hex" in linecontent:
+                ADATA["binary"] = linecontent['payload_hex'].decode('hex').encode("base64")
+
+        #    if re.search("[+]", linecontent['msg']):
+        #        print "found [] in " + str(linecontent)
+
+
+          #  REQUEST["raw"] = base64.encodestring(reassembledReq.encode('ascii', 'ignore'))
+
+
+            # generate template and send
+
+            esm = buildews(esm, DATA, REQUEST, ADATA)
+            jesm = buildjson(jesm, DATA, REQUEST, ADATA)
+
+            countme(MODUL, 'fileline', -2, ECFG)
+            countme(MODUL, 'daycounter', -2, ECFG)
+
+            if ECFG["a.verbose"] is True:
+                verbosemode(MODUL, DATA, REQUEST, ADATA)
+
+    # Cleaning linecache
+    clearcache()
+    if int(esm.xpath('count(//Alert)')) > 0:
+        sendews(esm)
+
+    writejson(jesm)
+
+    if y > 1:
+        logme(MODUL, "%s EWS alert records send ..." % (x + y - 2 - J), ("P2"), ECFG)
+    return
+
 ###############################################################################
  
 if __name__ == "__main__":
@@ -2431,7 +2545,7 @@ if __name__ == "__main__":
 
 
         for i in ("glastopfv3", "glastopfv2", "kippo", "dionaea", "honeytrap", "rdpdetect", "emobility", "conpot", "cowrie","elasticpot",
-                  "suricata", "rdpy", "mailoney", "vnclowpot", "heralding", "ciscoasa", "tanner"):
+                  "suricata", "rdpy", "mailoney", "vnclowpot", "heralding", "ciscoasa", "tanner", "glutton"):
 
             if ECFG["a.modul"]:
                 if ECFG["a.modul"] == i:
