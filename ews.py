@@ -31,18 +31,24 @@ import json
 import OpenSSL.SSL
 import ipaddress
 from collections import OrderedDict
+import logging
+import socket
+
 
 name = "EWS Poster"
-version = "v1.9.4"
+version = "v1.9.5"
 
 
 def init():
     global hostname
     global externalIP
     global internalIP
+    global hpc
     hostname = getHostname()
     externalIP=ECFG["ip"]
     internalIP=getOwnInternalIP()
+    logging.basicConfig()
+    hpc = False
 
 def ewswebservice(ems):
 
@@ -276,23 +282,42 @@ def malware(DIR,FILE,KILL, md5):
 
 
 def hpfeedsend(esm):
-
-    try:
-        hpc = hpfeeds.new(ECFG["host"],int(ECFG["port"]),ECFG["ident"],ECFG["secret"])
-        logme("hpfeedsend","Connect to (%s)" % format(hpc.brokername) ,("P3","VERBOSE"),ECFG)
-    except hpfeeds.FeedException, e:
-        logme("hpfeedsend","HPFeeds Error (%s)" % format(e) ,("LOG","VERBOSE"),ECFG)
+    global hpc
+    if not hpc:
         return False
 
     hpc.publish(ECFG["channels"],etree.tostring(esm, pretty_print=True))
 
     emsg = hpc.wait()
 
-    if emsg: 
-        logme("hpfeedsend","HPFeeds Error (%s)" % format(emsg) ,("LOG","VERBOSE"),ECFG)
+    if emsg:
+        logme("hpfeedsend","HPFeeds Error (%s)" % format(emsg) ,("P1","VERBOSE"),ECFG)
+        hpc=False
         return False
 
     return True
+
+def testhpfeedsbroker():
+    if ECFG["hpfeed"] is True:
+        # workaround if hpfeeds broker is offline as otherwise hpfeeds lib will loop connection attempt
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2)
+        result = sock.connect_ex((ECFG["host"], int(ECFG["port"])))
+        sock.close()
+
+        if result != 0:
+            # broker unavailable
+            logme(MODUL, "HPFEEDS broker is configured to {0}:{1} but is currently unavailable. Disabling hpfeeds submission for this round!".format(ECFG["host"], ECFG["port"]), ("P1"), ECFG)
+            return False
+
+        try:
+            hpc = hpfeeds.new(ECFG["host"], int(ECFG["port"]), ECFG["ident"], ECFG["secret"])
+            logme("hpfeedsend", "Connecting to (%s)" % format(hpc.brokername), ("P3", "VERBOSE"), ECFG)
+            return hpc
+        except hpfeeds.FeedException, e:
+            logme("hpfeedsend", "HPFeeds Error (%s)" % format(e), ("P1", "VERBOSE"), ECFG)
+            return False
+    return False
 
 
 def buildjson(jesm,DATA,REQUEST,ADATA):
@@ -2538,6 +2563,9 @@ if __name__ == "__main__":
         logme(MODUL,"EWSrun finish.",("P1","EXIT"),ECFG)
 
     while True:
+
+        global hpc
+        hpc=testhpfeedsbroker()
 
         if ECFG["a.daycounter"] is True:
             daycounterreset(lock,ECFG)
