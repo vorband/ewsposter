@@ -1748,13 +1748,16 @@ def suricata():
 
                         REQUEST = {
                                     "description" : "Suricata CVE Attack",
-                                    "request"         : httpextras
+                                    "request" : httpextras
                                 }
 
                         # Collect additional Data
 
                         ADATA = {
-                                "cve_id"       : "%s" % content["alert"]["cve_id"]
+                                "cve_id"       : "%s" % content["alert"]["cve_id"],
+                                "hostname": hostname,
+                                "externalIP": externalIP,
+                                "internalIP": internalIP
                                 }
 
 
