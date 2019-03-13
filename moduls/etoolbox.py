@@ -84,7 +84,7 @@ def readcfg(MODULE,ITEMS,FILE):
 
 def readonecfg(MODULE,item,FILE):
 
-    config = ConfigParser.ConfigParser()
+    config = ConfigParser.SafeConfigParser(os.environ)
     config.read(FILE)
 
     if config.has_option(MODULE,item) is True and len(config.get(MODULE,item)) > 0:

@@ -33,10 +33,10 @@ import ipaddress
 from collections import OrderedDict
 import logging
 import socket
-
+from xmljson import BadgerFish
 
 name = "EWS Poster"
-version = "v1.9.5"
+version = "v1.9.6"
 
 
 def init():
@@ -232,7 +232,10 @@ def sendews(esm):
         writeews(etree.tostring(esm, pretty_print=True))
 
     if ECFG["hpfeed"] is True:
-        hpfeedsend(esm)
+        if ECFG["hpfformat"].lower() == "json":
+            hpfeedsend(esm, "json")
+        else:
+            hpfeedsend(esm, "xml")
 
     return
 
@@ -281,19 +284,28 @@ def malware(DIR,FILE,KILL, md5):
         return 1, "FILE " + DIR + os.sep + FILE + " DOES NOT EXIST!"
 
 
-def hpfeedsend(esm):
+def hpfeedsend(esm, eformat):
     global hpc
     if not hpc:
         return False
 
-    hpc.publish(ECFG["channels"],etree.tostring(esm, pretty_print=True))
+    # remove auth header
+    etree.strip_elements(esm, "Authentication")
 
-    emsg = hpc.wait()
+    for i in range(0, len(esm)):
+        if eformat == "xml":
+            hpc.publish(ECFG["channels"], etree.tostring(esm[i], pretty_print=False))
 
-    if emsg:
-        logme("hpfeedsend","HPFeeds Error (%s)" % format(emsg) ,("P1","VERBOSE"),ECFG)
-        hpc=False
-        return False
+        if eformat == "json":
+            bf = BadgerFish(dict_type=OrderedDict)
+            hpc.publish(ECFG["channels"], json.dumps(bf.data(esm[i])))
+
+    # should be removed if no issues can be found. 03-13-19 av
+    # emsg = hpc.wait()
+    # if emsg:
+    #     logme("hpfeedsend","HPFeeds Error (%s)" % format(emsg) ,("P1","VERBOSE"),ECFG)
+    #     hpc=False
+    #     return False
 
     return True
 
@@ -311,8 +323,13 @@ def testhpfeedsbroker():
             return False
 
         try:
-            hpc = hpfeeds.new(ECFG["host"], int(ECFG["port"]), ECFG["ident"], ECFG["secret"])
-            logme("hpfeedsend", "Connecting to (%s)" % format(hpc.brokername), ("P3", "VERBOSE"), ECFG)
+            if ECFG["tlscert"].lower() != "false":
+                hpc = hpfeeds.new(ECFG["host"], int(ECFG["port"]), ECFG["ident"], ECFG["secret"], certfile=ECFG["tlscert"], reconnect=False)
+                logme("hpfeedsend", "Connecting to %s via TLS" % format(hpc.brokername+"/"+ECFG["host"]+":"+str(ECFG["port"])), ("P3", "VERBOSE"), ECFG)
+            else:
+                hpc = hpfeeds.new(ECFG["host"], int(ECFG["port"]), ECFG["ident"], ECFG["secret"], reconnect=False)
+                logme("hpfeedsend", "Connecting to %s" % format(hpc.brokername+"/"+ECFG["host"]+":"+str(ECFG["port"])), ("P3", "VERBOSE"), ECFG)
+
             return hpc
         except hpfeeds.FeedException, e:
             logme("hpfeedsend", "HPFeeds Error (%s)" % format(e), ("P1", "VERBOSE"), ECFG)

@@ -237,6 +237,18 @@ def ecfg(name,version):
     else:
        HCFG["hpfeed"] = False
 
+    # hpfeeds format
+    EWSHPFFORMAT =readonecfg("HPFEED","hpfformat", ECFG["cfgfile"])
+    if EWSHPFFORMAT.lower() in ("ews", "json"):
+        ECFG["hpfformat"] = EWSHPFFORMAT.lower()
+    else:
+        ECFG["hpfformat"] = "ews"
+
+    # hpfeeds tls cert
+    EWSHPFCERT =readonecfg("HPFEED","tlscert", ECFG["cfgfile"])
+    if EWSHPFCERT and EWSHPFCERT.lower() != "":
+        ECFG["tlscert"] = EWSHPFCERT.lower()
+
     # Read EWSJSON Config Parameter
 
     ITEMS = ("json","jsondir")
