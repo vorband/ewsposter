@@ -941,16 +941,37 @@ def cowrie():
             endtime = "%s-%s-%s %s" % (key[7][0:4], key[7][5:7], key[7][8:10], key[7][11:19])
         else: 
             endtime = ""
-        
+
+        # fix unicode in json log
+        cusername, cpassword, cinput="","",""
+        try:
+            cusername=str(key[1])
+        except UnicodeEncodeError:
+            logme(MODUL, "Unicode in username  "+ key[1]+ " - removing unicode.", ("P3"), ECFG)
+            cusername=key[1].encode('ascii', 'ignore')
+
+        try:
+            cpassword = str(key[2])
+        except UnicodeEncodeError:
+            logme(MODUL, "Unicode in password " + key[2] + " - removing unicode.", ("P3"), ECFG)
+            cpassword = key[2].encode('ascii', 'ignore')
+
+        try:
+            cinput = str(key[14])
+        except UnicodeEncodeError:
+            logme(MODUL, "Unicode in input " + key[14] + " - removing unicode.", ("P3"), ECFG)
+            cinput=str(key[14]).encode('ascii', 'ignore')
+
+
         ADATA = {
                  "sessionid"   : str(key[5]),
                  "starttime"   : "%s-%s-%s %s" % (key[6][0:4], key[6][5:7], key[6][8:10], key[6][11:19]),
                  "endtime"     : endtime,
                  "version"     : str(key[10]),
                  "login"       : login,
-                 "username"    : str(key[1]),
-                 "password"    : str(key[2]),
-                 "input"       : str(key[14]),
+                 "username"    : cusername,
+                 "password"    : cpassword,
+                 "input"       : cinput,
                  "hostname": hostname,
                  "externalIP": externalIP,
                  "internalIP": internalIP
